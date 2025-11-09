@@ -5,7 +5,17 @@ import { useSearchParams } from 'next/navigation';
 import CodeEditor from '@/components/CodeEditor';
 import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
-import { languagesAPI, executionAPI, shareAPI, Language, ExecuteResponse } from '@/lib/api';
+import SettingsModal from '@/components/SettingsModal';
+import {
+  languagesAPI,
+  executionAPI,
+  shareAPI,
+  settingsAPI,
+  Language,
+  ExecuteResponse,
+  EditorSettings,
+  ThemeSettings,
+} from '@/lib/api';
 
 // Force dynamic rendering for URL search params
 export const dynamic = 'force-dynamic';
@@ -41,6 +51,17 @@ func main() {
 `,
 };
 
+// Helper to get user ID from localStorage
+const getUserId = (): string => {
+  if (typeof window === 'undefined') return 'anonymous';
+  let userId = localStorage.getItem('playground_user_id');
+  if (!userId) {
+    userId = `user_${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem('playground_user_id', userId);
+  }
+  return userId;
+};
+
 export default function PlaygroundPage() {
   const searchParams = useSearchParams();
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -52,9 +73,22 @@ export default function PlaygroundPage() {
   const [loadingLanguages, setLoadingLanguages] = useState<boolean>(true);
   const [sharing, setSharing] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [editorSettings, setEditorSettings] = useState<EditorSettings>({
+    font_size: 14,
+    font_family: 'Fira Code, Monaco, monospace',
+    tab_size: 2,
+    auto_save: false,
+    minimap: true,
+  });
+  const [themeSettings, setThemeSettings] = useState<ThemeSettings>({
+    theme: 'dark',
+    color_scheme: 'vs-dark',
+  });
 
   useEffect(() => {
     loadLanguages();
+    loadUserSettings();
   }, []);
 
   useEffect(() => {
@@ -204,6 +238,34 @@ export default function PlaygroundPage() {
     }
   };
 
+  const loadUserSettings = async () => {
+    try {
+      const userId = getUserId();
+      const settings = await settingsAPI.get(userId);
+      setEditorSettings(settings.editor);
+      setThemeSettings(settings.theme);
+    } catch (err) {
+      // If settings don't exist, use defaults
+      console.log('No saved settings found, using defaults');
+    }
+  };
+
+  const handleSaveSettings = async (editor: EditorSettings, theme: ThemeSettings) => {
+    try {
+      const userId = getUserId();
+      await settingsAPI.save({
+        user_id: userId,
+        editor,
+        theme,
+      });
+      setEditorSettings(editor);
+      setThemeSettings(theme);
+    } catch (err: any) {
+      console.error('Failed to save settings:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to save settings');
+    }
+  };
+
   if (loadingLanguages) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
@@ -244,6 +306,12 @@ export default function PlaygroundPage() {
               {sharing ? 'Sharing...' : '🔗 Share'}
             </button>
             <button
+              onClick={() => setShowSettings(true)}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              ⚙️ Settings
+            </button>
+            <button
               onClick={handleRun}
               disabled={loading}
               className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
@@ -267,6 +335,11 @@ export default function PlaygroundPage() {
                 value={code}
                 onChange={setCode}
                 language={selectedLanguage}
+                fontSize={editorSettings.font_size}
+                fontFamily={editorSettings.font_family}
+                tabSize={editorSettings.tab_size}
+                minimap={editorSettings.minimap}
+                theme={themeSettings.color_scheme}
               />
             </div>
           </div>
@@ -313,6 +386,15 @@ export default function PlaygroundPage() {
           </div>
         </div>
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onSave={handleSaveSettings}
+        initialEditor={editorSettings}
+        initialTheme={themeSettings}
+      />
     </div>
   );
 }

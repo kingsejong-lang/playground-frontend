@@ -7,9 +7,24 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   language: string;
   readOnly?: boolean;
+  fontSize?: number;
+  fontFamily?: string;
+  tabSize?: number;
+  minimap?: boolean;
+  theme?: string;
 }
 
-export default function CodeEditor({ value, onChange, language, readOnly = false }: CodeEditorProps) {
+export default function CodeEditor({
+  value,
+  onChange,
+  language,
+  readOnly = false,
+  fontSize = 14,
+  fontFamily = 'Fira Code, Monaco, monospace',
+  tabSize = 2,
+  minimap = true,
+  theme = 'vs-dark',
+}: CodeEditorProps) {
   const getMonacoLanguage = (lang: string): string => {
     if (lang.startsWith('python')) return 'python';
     if (lang.startsWith('go')) return 'go';
@@ -23,11 +38,13 @@ export default function CodeEditor({ value, onChange, language, readOnly = false
       language={getMonacoLanguage(language)}
       value={value}
       onChange={(value) => onChange(value || '')}
-      theme="vs-dark"
+      theme={theme}
       options={{
         readOnly,
-        minimap: { enabled: false },
-        fontSize: 14,
+        minimap: { enabled: minimap },
+        fontSize,
+        fontFamily,
+        tabSize,
         lineNumbers: 'on',
         scrollBeyondLastLine: false,
         automaticLayout: true,
