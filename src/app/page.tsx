@@ -74,6 +74,8 @@ export default function PlaygroundPage() {
   const [sharing, setSharing] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [streaming, setStreaming] = useState<boolean>(false);
+  const [streamEvents, setStreamEvents] = useState<Array<{type: string; message: string; timestamp: string}>>([]);
   const [editorSettings, setEditorSettings] = useState<EditorSettings>({
     font_size: 14,
     font_family: 'Fira Code, Monaco, monospace',
@@ -156,6 +158,77 @@ export default function PlaygroundPage() {
       setError(err.response?.data?.message || err.message || 'Execution failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRunStream = async () => {
+    if (!code.trim()) {
+      setError('Please write some code first');
+      return;
+    }
+
+    setStreaming(true);
+    setStreamEvents([]);
+    setOutput(null);
+    setError(null);
+
+    try {
+      const lang = languages.find(l => l.id === selectedLanguage);
+      if (!lang) {
+        throw new Error('Language not found');
+      }
+
+      const extension = lang.extensions[0] || '.txt';
+      const filename = `main${extension}`;
+
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const response = await fetch(`${API_URL}/api/v1/execute/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          language: selectedLanguage,
+          files: {
+            [filename]: code,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Stream failed to start');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            try {
+              const data = JSON.parse(line.substring(5).trim());
+              setStreamEvents((prev) => [...prev, data]);
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Stream execution failed:', err);
+      setError(err.message || 'Stream execution failed');
+    } finally {
+      setStreaming(false);
     }
   };
 
@@ -313,10 +386,17 @@ export default function PlaygroundPage() {
             </button>
             <button
               onClick={handleRun}
-              disabled={loading}
+              disabled={loading || streaming}
               className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Running...' : '▶ Run'}
+            </button>
+            <button
+              onClick={handleRunStream}
+              disabled={loading || streaming}
+              className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+            >
+              {streaming ? 'Streaming...' : '▶ Run (Stream)'}
             </button>
           </div>
         </div>
@@ -352,7 +432,13 @@ export default function PlaygroundPage() {
               <h2 className="text-sm font-medium text-gray-300">Output</h2>
             </div>
             <div className="flex-1">
-              <OutputPanel output={output} loading={loading} error={error} />
+              <OutputPanel
+                output={output}
+                loading={loading}
+                error={error}
+                streaming={streaming}
+                streamEvents={streamEvents}
+              />
             </div>
           </div>
         </div>
