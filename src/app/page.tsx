@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import CodeEditor from '@/components/CodeEditor';
 import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
-import { languagesAPI, executionAPI, Language, ExecuteResponse } from '@/lib/api';
+import { languagesAPI, executionAPI, shareAPI, Language, ExecuteResponse } from '@/lib/api';
+
+// Force dynamic rendering for URL search params
+export const dynamic = 'force-dynamic';
 
 const DEFAULT_CODE: Record<string, string> = {
   python_3_12: `# Welcome to Kingsejong Playground
@@ -38,6 +42,7 @@ func main() {
 };
 
 export default function PlaygroundPage() {
+  const searchParams = useSearchParams();
   const [languages, setLanguages] = useState<Language[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
   const [code, setCode] = useState<string>('');
@@ -45,10 +50,19 @@ export default function PlaygroundPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingLanguages, setLoadingLanguages] = useState<boolean>(true);
+  const [sharing, setSharing] = useState<boolean>(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadLanguages();
   }, []);
+
+  useEffect(() => {
+    const shareId = searchParams.get('share');
+    if (shareId) {
+      loadSharedCode(shareId);
+    }
+  }, [searchParams]);
 
   const loadLanguages = async () => {
     try {
@@ -122,6 +136,74 @@ export default function PlaygroundPage() {
     }
   };
 
+  const loadSharedCode = async (shareId: string) => {
+    try {
+      const share = await shareAPI.get(shareId);
+      setSelectedLanguage(share.language);
+
+      // Get the first file's content
+      const firstFile = Object.values(share.files)[0];
+      setCode(firstFile || '');
+      setOutput(null);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load shared code:', err);
+      setError('Failed to load shared code');
+    }
+  };
+
+  const handleShare = async () => {
+    if (!code.trim()) {
+      setError('Please write some code first');
+      return;
+    }
+
+    setSharing(true);
+    setShareUrl(null);
+    setError(null);
+
+    try {
+      const lang = languages.find(l => l.id === selectedLanguage);
+      if (!lang) {
+        throw new Error('Language not found');
+      }
+
+      const extension = lang.extensions[0] || '.txt';
+      const filename = `main${extension}`;
+
+      const share = await shareAPI.create({
+        language: selectedLanguage,
+        files: {
+          [filename]: code,
+        },
+        title: `${lang.name} Code`,
+        description: 'Shared from Kingsejong Playground',
+      });
+
+      const url = `${window.location.origin}${window.location.pathname}?share=${share.id}`;
+      setShareUrl(url);
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(url);
+    } catch (err: any) {
+      console.error('Share failed:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to create share');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleCopyShareUrl = async () => {
+    if (shareUrl) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Share URL copied to clipboard!');
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
+
   if (loadingLanguages) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
@@ -153,6 +235,13 @@ export default function PlaygroundPage() {
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
             >
               Load Template
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+            >
+              {sharing ? 'Sharing...' : '🔗 Share'}
             </button>
             <button
               onClick={handleRun}
@@ -195,6 +284,35 @@ export default function PlaygroundPage() {
           </div>
         </div>
       </div>
+
+      {/* Share URL Modal */}
+      {shareUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-white mb-4">Share Your Code</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Your code has been shared! The URL has been copied to clipboard.
+            </p>
+            <div className="bg-gray-800 border border-gray-700 rounded p-3 mb-4">
+              <code className="text-sm text-blue-400 break-all">{shareUrl}</code>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCopyShareUrl}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Copy Again
+              </button>
+              <button
+                onClick={() => setShareUrl(null)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
