@@ -6,6 +6,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { shareAPI, Language } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
+import { useToast } from './useToast';
 
 interface UseShareReturn {
   shareUrl: string | null;
@@ -19,6 +20,7 @@ interface UseShareReturn {
 
 export function useShare(): UseShareReturn {
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,14 +91,14 @@ export function useShare(): UseShareReturn {
     if (shareUrl) {
       try {
         await navigator.clipboard.writeText(shareUrl);
-        // Note: Using alert here, but could be replaced with toast notification
-        alert('Share URL copied to clipboard!');
+        toast.success('Share URL copied to clipboard!');
       } catch (err) {
         console.error('Failed to copy:', err);
+        toast.error('Failed to copy to clipboard');
         setError('Failed to copy to clipboard');
       }
     }
-  }, [shareUrl]);
+  }, [shareUrl, toast]);
 
   const closeShareModal = useCallback(() => {
     setShareUrl(null);
