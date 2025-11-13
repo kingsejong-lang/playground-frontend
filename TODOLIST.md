@@ -1,8 +1,8 @@
 # 킹세종 Playground 프론트엔드 개발 TODO 리스트
 
 **마지막 업데이트**: 2025-11-14
-**전체 완료율**: 78% (MVP + CSP + Zod + Error Boundary 완료, 테스트/프로토콜 미완)
-**현재 Phase**: Phase 4 진행 중 (보안 강화 - CSP ✅, Zod ✅, Error Boundary ✅)
+**전체 완료율**: 82% (MVP + CSP + Zod + Error Boundary + Custom Hooks 완료, 테스트 미완)
+**현재 Phase**: Phase 4 진행 중 (보안 강화 - CSP ✅, Zod ✅, Error Boundary ✅, Custom Hooks ✅)
 **백엔드 상태**: ✅ 100% 완료 (131/131) - E2E 테스트, 모니터링 포함
 
 ---
@@ -32,10 +32,14 @@
   - 앱 크래시 방지
   - 사용자 친화적 Fallback UI
   - 에러 로깅 및 재시도 기능
+- **커스텀 훅 리팩토링** ✅ (2025-11-14)
+  - page.tsx 522줄 → 274줄 (47% 감소)
+  - 4개 커스텀 훅 생성 (useLanguages, useCodeExecution, useShare, useSettings)
+  - 비즈니스 로직과 UI 분리
+  - Suspense 경계 추가
 
 ### 🚧 부분 완료 (개선 필요)
 - SSE 구현 (수동 파싱, 재연결 로직 없음)
-- 컴포넌트 구조 (page.tsx 523줄로 너무 큼)
 
 ### ❌ 미완료 (중요)
 - 보안 기능 (CSRF 토큰)
@@ -311,19 +315,30 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ---
 
-### 4. 커스텀 훅으로 리팩토링
+### 4. 커스텀 훅으로 리팩토링 ✅
 **우선순위**: HIGH (코드 품질)
 **예상 시간**: 2일
-**현재 상태**: page.tsx가 523줄로 너무 큼
+**현재 상태**: ✅ **완료 (2025-11-14)**
 **목표**: 로직을 커스텀 훅으로 분리하여 재사용성 향상
 
 **작업 내용**:
-- [ ] `useCodeExecution` 훅 생성 (실행 로직)
-- [ ] `useSettings` 훅 생성 (설정 로직)
-- [ ] `useShare` 훅 생성 (공유 로직)
-- [ ] `useLanguages` 훅 생성 (언어 선택)
-- [ ] `useSSE` 훅 생성 (스트리밍)
-- [ ] page.tsx를 200줄 이하로 축소
+- [x] `useCodeExecution` 훅 생성 (실행 로직)
+- [x] `useSettings` 훅 생성 (설정 로직)
+- [x] `useShare` 훅 생성 (공유 로직)
+- [x] `useLanguages` 훅 생성 (언어 선택)
+- [x] SSE 스트리밍을 useCodeExecution에 통합
+- [x] page.tsx를 274줄로 축소 (522줄 → 274줄, 47% 감소)
+- [x] Suspense 경계 추가 (useSearchParams SSR 이슈 해결)
+
+**완료 내용**:
+- 4개 커스텀 훅 생성 (src/hooks/)
+  - useLanguages.ts (113줄): 언어 관리, 템플릿 로딩
+  - useCodeExecution.ts (165줄): 코드 실행 (일반/스트리밍)
+  - useShare.ts (115줄): 코드 공유, URL 파라미터 처리
+  - useSettings.ts (95줄): 사용자 설정 (인증 상태 기반)
+- page.tsx 대폭 축소 (522줄 → 274줄)
+- 비즈니스 로직과 UI 분리로 테스트 용이성 향상
+- Suspense 경계로 Next.js SSR 경고 해결
 
 **파일 경로**:
 ```
@@ -1173,7 +1188,7 @@ src/lib/history.ts
 - [x] #1: CSP 구현 (XSS 방어) ✅
 - [x] #2: Zod 검증 (런타임 타입 안전성) ✅
 - [x] #3: Error Boundary (앱 안정성) ✅
-- [ ] #4: 커스텀 훅 리팩토링 (코드 품질)
+- [x] #4: 커스텀 훅 리팩토링 (코드 품질) ✅
 - [ ] #5: 테스트 인프라 (품질 보증)
 
 **완료 시 혜택**:
@@ -1225,10 +1240,10 @@ src/lib/history.ts
 - [x] Content Security Policy (CSP)
 - [x] Zod 런타임 검증
 - [x] Error Boundary
+- [x] 커스텀 훅 리팩토링
 
 ### 현재 진행 중
-- [ ] 커스텀 훅 리팩토링
-- [ ] 테스트 작성
+- [ ] 테스트 인프라 구축
 
 ### 다음 스프린트
 - [ ] Toast 시스템
@@ -1276,12 +1291,14 @@ src/lib/history.ts
 ## 📊 통계
 
 **현재 상태**:
-- 총 코드 라인: ~2,750 lines
+- 총 코드 라인: ~3,250 lines
 - 컴포넌트: 6개 (ErrorBoundary 추가)
-- 훅: 2개 (Context)
+- 커스텀 훅: 4개 (useLanguages, useCodeExecution, useShare, useSettings)
+- Context 훅: 1개 (useAuth)
 - 테스트: 0개 ❌
 - 보안 기능: 70% ✅ (CSP ✅, Zod ✅, Error Boundary ✅, CSRF ❌)
 - 프로토콜 지원: 50% (2/4)
+- 코드 품질: page.tsx 522줄 → 274줄 (47% 개선) ✅
 
 **목표 상태**:
 - 총 코드 라인: ~3,000 lines
@@ -1311,8 +1328,9 @@ src/lib/history.ts
 - Content Security Policy (CSP) ✅
 - Zod 런타임 검증 ✅
 - Error Boundary ✅
-- **즉시 필요**: 커스텀 훅 리팩토링, 테스트 작성
-- **다음**: Toast 시스템, WebSocket/gRPC 통합
+- 커스텀 훅 리팩토링 ✅
+- **즉시 필요**: 테스트 인프라 구축 (Jest + React Testing Library)
+- **다음**: Toast 시스템, 키보드 단축키, WebSocket/gRPC 통합
 
 ---
 
