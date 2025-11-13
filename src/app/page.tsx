@@ -7,11 +7,13 @@ import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
 import SettingsModal from '@/components/SettingsModal';
 import AuthModal from '@/components/AuthModal';
+import { ShortcutsHelp } from '@/components/ShortcutsHelp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useShare } from '@/hooks/useShare';
 import { useSettings } from '@/hooks/useSettings';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 
 // Force dynamic rendering for URL search params
 export const dynamic = 'force-dynamic';
@@ -64,9 +66,32 @@ function PlaygroundContent() {
   // Local UI state
   const [showSettings, setShowSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // Combined error
   const error = languageError || executionError || shareError || settingsError;
+
+  // Keyboard shortcuts
+  useKeyboardShortcut('Enter', () => execute(code, selectedLanguage, languages), {
+    ctrl: true,
+    enabled: !executing && !streaming,
+  });
+
+  useKeyboardShortcut('Enter', () => executeStream(code, selectedLanguage, languages), {
+    ctrl: true,
+    shift: true,
+    enabled: !executing && !streaming,
+  });
+
+  useKeyboardShortcut('k', resetExecution, {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut(',', () => setShowSettings(true), {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut('?', () => setShowShortcutsHelp(prev => !prev));
 
   // Load shared code from URL params
   useEffect(() => {
@@ -251,6 +276,12 @@ function PlaygroundContent() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
+      />
+
+      {/* Shortcuts Help Modal */}
+      <ShortcutsHelp
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
       />
     </div>
   );

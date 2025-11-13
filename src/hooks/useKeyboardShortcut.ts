@@ -1,0 +1,110 @@
+/**
+ * Custom hook for keyboard shortcuts.
+ * Supports Ctrl/Cmd, Shift, Alt modifiers.
+ */
+
+import { useEffect, useCallback } from 'react';
+
+export interface KeyboardShortcutOptions {
+  ctrl?: boolean;
+  shift?: boolean;
+  alt?: boolean;
+  enabled?: boolean;
+}
+
+type ShortcutHandler = (e: KeyboardEvent) => void;
+
+/**
+ * Register a keyboard shortcut handler.
+ *
+ * @param key - The key to listen for (e.g., 'Enter', 's', 'k')
+ * @param handler - Function to call when shortcut is triggered
+ * @param options - Modifier keys and enabled state
+ *
+ * @example
+ * // Ctrl/Cmd + Enter
+ * useKeyboardShortcut('Enter', handleRun, { ctrl: true });
+ *
+ * // Ctrl/Cmd + Shift + Enter
+ * useKeyboardShortcut('Enter', handleRunStream, { ctrl: true, shift: true });
+ *
+ * // Ctrl/Cmd + K
+ * useKeyboardShortcut('k', handleClear, { ctrl: true });
+ */
+export function useKeyboardShortcut(
+  key: string,
+  handler: ShortcutHandler,
+  options: KeyboardShortcutOptions = {}
+) {
+  const { ctrl = false, shift = false, alt = false, enabled = true } = options;
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!enabled) return;
+
+      // Use metaKey for Mac (Cmd), ctrlKey for Windows/Linux
+      const ctrlKey = navigator.platform.includes('Mac') ? e.metaKey : e.ctrlKey;
+
+      // Check if all required modifiers match
+      const ctrlMatch = !ctrl || ctrlKey;
+      const shiftMatch = !shift || e.shiftKey;
+      const altMatch = !alt || e.altKey;
+
+      // Check if no extra modifiers are pressed
+      const noExtraCtrl = ctrl || !ctrlKey;
+      const noExtraShift = shift || !e.shiftKey;
+      const noExtraAlt = alt || !e.altKey;
+
+      if (
+        e.key === key &&
+        ctrlMatch &&
+        shiftMatch &&
+        altMatch &&
+        noExtraCtrl &&
+        noExtraShift &&
+        noExtraAlt
+      ) {
+        e.preventDefault();
+        handler(e);
+      }
+    },
+    [key, handler, ctrl, shift, alt, enabled]
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown, enabled]);
+}
+
+/**
+ * Get platform-specific modifier key name.
+ * Returns 'Cmd' on Mac, 'Ctrl' on other platforms.
+ */
+export function getModifierKeyName(): string {
+  return navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl';
+}
+
+/**
+ * Format a keyboard shortcut for display.
+ *
+ * @example
+ * formatShortcut('Enter', { ctrl: true }) // 'Ctrl+Enter' or 'Cmd+Enter'
+ * formatShortcut('k', { ctrl: true, shift: true }) // 'Ctrl+Shift+K'
+ */
+export function formatShortcut(key: string, options: KeyboardShortcutOptions = {}): string {
+  const { ctrl = false, shift = false, alt = false } = options;
+  const parts: string[] = [];
+
+  if (ctrl) parts.push(getModifierKeyName());
+  if (shift) parts.push('Shift');
+  if (alt) parts.push('Alt');
+
+  // Capitalize single letters
+  const displayKey = key.length === 1 ? key.toUpperCase() : key;
+  parts.push(displayKey);
+
+  return parts.join('+');
+}
