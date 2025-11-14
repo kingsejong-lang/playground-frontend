@@ -9,6 +9,22 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include JWT token in headers
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export interface Language {
   id: string;
   name: string;
@@ -100,7 +116,7 @@ export interface UserSettings {
 }
 
 export interface SaveSettingsRequest {
-  user_id: string;
+  user_id?: string; // Optional: backend will use authenticated user ID
   editor?: EditorSettings;
   theme?: ThemeSettings;
 }
@@ -152,8 +168,60 @@ export const settingsAPI = {
     return response.data;
   },
 
-  get: async (userId: string): Promise<UserSettings> => {
-    const response = await api.get<UserSettings>(`/settings/${userId}`);
+  get: async (): Promise<UserSettings> => {
+    const response = await api.get<UserSettings>('/settings');
+    return response.data;
+  },
+};
+
+// Auth types
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  tokens: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  };
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    roles: string[];
+  };
+}
+
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
+export const authAPI = {
+  register: async (request: RegisterRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/register', request);
+    return response.data;
+  },
+
+  login: async (request: LoginRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/login', request);
+    return response.data;
+  },
+
+  refresh: async (request: RefreshTokenRequest): Promise<{ access_token: string; refresh_token: string; expires_in: number }> => {
+    const response = await api.post<{ access_token: string; refresh_token: string; expires_in: number }>('/auth/refresh', request);
+    return response.data;
+  },
+
+  getMe: async (): Promise<{ id: string; email: string; name: string; roles: string[] }> => {
+    const response = await api.get<{ id: string; email: string; name: string; roles: string[] }>('/auth/me');
     return response.data;
   },
 };
