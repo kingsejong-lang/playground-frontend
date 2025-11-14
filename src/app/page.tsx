@@ -228,6 +228,7 @@ function PlaygroundContent() {
                 error={error}
                 streaming={streaming}
                 streamEvents={streamEvents}
+                onClear={resetExecution}
               />
             </div>
           </div>
