@@ -60,8 +60,12 @@ function PlaygroundContent() {
     streaming,
     streamEvents,
     error: executionError,
+    wsConnected,
+    wsConnecting,
+    wsReconnecting,
     execute,
     executeStream,
+    executeWebSocket,
     reset: resetExecution,
   } = useCodeExecution();
 
@@ -266,6 +270,33 @@ function PlaygroundContent() {
             >
               {streaming ? 'Streaming...' : '▶ Run (Stream)'}
             </button>
+            <div className="relative">
+              <button
+                onClick={() => executeWebSocket(getCurrentCode(), selectedLanguage, languages)}
+                disabled={executing || streaming || !wsConnected}
+                className="px-6 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+              >
+                {streaming && wsConnected ? 'WS Running...' : '▶ Run (WebSocket)'}
+              </button>
+              {/* WebSocket status indicator */}
+              <div className="absolute -top-1 -right-1">
+                {wsConnecting ? (
+                  <span className="flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                  </span>
+                ) : wsReconnecting ? (
+                  <span className="flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                  </span>
+                ) : wsConnected ? (
+                  <span className="inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                ) : (
+                  <span className="inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </header>

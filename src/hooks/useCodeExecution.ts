@@ -1,11 +1,13 @@
 /**
  * Custom hook for executing code.
- * Handles both regular and streaming execution modes.
+ * Handles regular, streaming (SSE), and WebSocket execution modes.
  */
 
 import { useState, useCallback } from 'react';
 import { executionAPI, ExecuteResponse, Language } from '@/lib/api';
 import { extractErrorMessage } from '@/lib/guards';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { ExecutionEvent as WSExecutionEvent } from '@/lib/websocket/protocol';
 
 interface ExecutionEvent {
   type: string;
@@ -19,8 +21,12 @@ interface UseCodeExecutionReturn {
   streaming: boolean;
   streamEvents: ExecutionEvent[];
   error: string | null;
+  wsConnected: boolean;
+  wsConnecting: boolean;
+  wsReconnecting: boolean;
   execute: (code: string, language: string, languages: Language[]) => Promise<void>;
   executeStream: (code: string, language: string, languages: Language[]) => Promise<void>;
+  executeWebSocket: (code: string, language: string, languages: Language[]) => Promise<void>;
   reset: () => void;
 }
 
@@ -30,6 +36,33 @@ export function useCodeExecution(): UseCodeExecutionReturn {
   const [streaming, setStreaming] = useState<boolean>(false);
   const [streamEvents, setStreamEvents] = useState<ExecutionEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // WebSocket configuration
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  const WS_URL = API_URL.replace('http', 'ws') + '/api/v1/ws';
+
+  // WebSocket hook
+  const {
+    connected: wsConnected,
+    connecting: wsConnecting,
+    reconnecting: wsReconnecting,
+    execute: wsExecute,
+  } = useWebSocket({
+    url: WS_URL,
+    enabled: true,
+    onExecutionEvent: (event: WSExecutionEvent) => {
+      // Convert WebSocket event to ExecutionEvent format
+      setStreamEvents((prev) => [...prev, {
+        type: event.type,
+        message: event.message,
+        timestamp: event.timestamp,
+      }]);
+    },
+    onError: (errorResponse) => {
+      setError(errorResponse.message);
+      setStreaming(false);
+    },
+  });
 
   const execute = useCallback(async (
     code: string,
@@ -154,6 +187,56 @@ export function useCodeExecution(): UseCodeExecutionReturn {
     }
   }, []);
 
+  const executeWebSocket = useCallback(async (
+    code: string,
+    language: string,
+    languages: Language[]
+  ) => {
+    if (!code.trim()) {
+      setError('Please write some code first');
+      return;
+    }
+
+    if (!wsConnected) {
+      setError('WebSocket not connected');
+      return;
+    }
+
+    setStreaming(true);
+    setStreamEvents([]);
+    setOutput(null);
+    setError(null);
+
+    try {
+      const lang = languages.find(l => l.id === language);
+      if (!lang) {
+        setError('Language not found');
+        setStreaming(false);
+        return;
+      }
+
+      const extension = lang.extensions[0] || '.txt';
+      const filename = `main${extension}`;
+
+      // Execute via WebSocket
+      const requestId = await wsExecute({
+        language,
+        files: {
+          [filename]: code,
+        },
+      });
+
+      if (!requestId) {
+        setError('Failed to execute via WebSocket');
+        setStreaming(false);
+      }
+    } catch (err: unknown) {
+      console.error('WebSocket execution failed:', err);
+      setError(extractErrorMessage(err));
+      setStreaming(false);
+    }
+  }, [wsConnected, wsExecute]);
+
   const reset = useCallback(() => {
     setOutput(null);
     setStreamEvents([]);
@@ -166,8 +249,12 @@ export function useCodeExecution(): UseCodeExecutionReturn {
     streaming,
     streamEvents,
     error,
+    wsConnected,
+    wsConnecting,
+    wsReconnecting,
     execute,
     executeStream,
+    executeWebSocket,
     reset,
   };
 }

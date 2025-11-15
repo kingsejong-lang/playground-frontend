@@ -829,19 +829,21 @@ useKeyboardShortcut('s', handleSaveSettings, { ctrl: true });
 
 ---
 
-### 8. WebSocket 클라이언트 구현
+### 8. WebSocket 클라이언트 구현 ✅
 **우선순위**: MEDIUM (프로토콜)
 **예상 시간**: 2일
-**현재 상태**: SSE만 구현
-**목표**: 양방향 실시간 통신 지원
+**현재 상태**: ✅ **완료 (2025-11-15)**
+**목표**: 양방향 실시간 통신 지원 ✅
 
 **작업 내용**:
-- [ ] WebSocket 클라이언트 클래스 생성
-- [ ] 메시지 프로토콜 정의
-- [ ] 재연결 로직 (exponential backoff)
-- [ ] Ping/Pong 하트비트
-- [ ] `useWebSocket` 훅 생성
-- [ ] Gateway WebSocket 엔드포인트 연동
+- [x] WebSocket 클라이언트 클래스 생성 (285줄)
+- [x] 메시지 프로토콜 정의 (112줄)
+- [x] 재연결 로직 (exponential backoff with jitter)
+- [x] Ping/Pong 하트비트 (30초 간격)
+- [x] `useWebSocket` 훅 생성 (198줄)
+- [x] useCodeExecution에 executeWebSocket 통합
+- [x] page.tsx에 WebSocket 실행 버튼 추가
+- [x] WebSocket 연결 상태 인디케이터 (녹색/노란색/주황색/빨간색)
 
 **파일 경로**:
 ```
@@ -1218,8 +1220,8 @@ src/lib/history.ts
 **작업 목록**:
 - [x] #6: Toast 시스템 ✅ (이미 구현됨)
 - [x] #7: 키보드 단축키 ✅ (이미 구현됨)
-- [ ] #8: WebSocket (다음 작업)
-- [ ] #10: 실행 히스토리
+- [x] #8: WebSocket ✅ (완료)
+- [ ] #10: 실행 히스토리 (다음 작업)
 - [ ] #11: 멀티 파일
 - [ ] #12: 출력 개선
 
