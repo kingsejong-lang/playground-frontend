@@ -957,19 +957,26 @@ export function useWebSocket(url: string) {
 
 ---
 
-### 9. gRPC-Web 클라이언트 구현
+### 9. gRPC-Web 클라이언트 구현 ⏸️
 **우선순위**: MEDIUM (프로토콜)
 **예상 시간**: 3일
-**현재 상태**: REST만 사용
+**현재 상태**: ⏸️ **백엔드 의존성 대기 중**
 **목표**: 고성능 gRPC 통신
+**차단 요인**: 백엔드 gRPC-Web 지원 필요 (Envoy 프록시 또는 grpcweb 패키지)
 
-**작업 내용**:
-- [ ] `@grpc/grpc-js`, `grpc-web` 패키지 설치
-- [ ] Protobuf 파일 생성 (`.proto`)
-- [ ] TypeScript 코드 생성 스크립트
+**백엔드 선행 작업** (📍 `../playground-backend/TODOLIST.md` 참고):
+- [ ] Gateway에 gRPC-Web 핸들러 추가
+- [ ] Envoy 프록시 설정 또는 `improbable-eng/grpc-web` 통합
+- [ ] CORS 헤더 설정
+- [ ] gRPC-Web 엔드포인트 테스트
+
+**프론트엔드 작업** (백엔드 완료 후):
+- [ ] `grpc-web` 패키지 설치
+- [ ] 백엔드 proto 파일 복사
+- [ ] TypeScript 코드 생성 스크립트 (`protoc-gen-grpc-web`)
 - [ ] gRPC 클라이언트 초기화
 - [ ] Execution, Language, Storage 서비스 연동
-- [ ] Envoy 프록시 설정 (백엔드 팀과 협업)
+- [ ] API 클라이언트에 gRPC 옵션 추가
 
 **파일 경로**:
 ```
@@ -1243,13 +1250,19 @@ src/lib/ansi-parser.tsx (132줄)
 - ✅ 멀티 파일 편집 지원
 - ✅ 고급 출력 기능 (검색, 줄번호, ANSI 색상)
 
-### Phase 6: 고급 프로토콜
+### Phase 6: 고급 프로토콜 (현재 진행 중) 🔥
 **기간**: 1주
 **완료 기준**: gRPC-Web, 성능 최적화
+**차단 사항**: gRPC-Web은 백엔드 선행 작업 필요
 
-- [ ] #9: gRPC-Web
-- [ ] #18: 성능 최적화
-- [ ] #14: Monaco 고급 기능
+**작업 목록**:
+- [ ] #9: gRPC-Web ⏸️ (백엔드 대기 중)
+- [ ] #18: 성능 최적화 (진행 가능)
+- [ ] #14: Monaco 고급 기능 (진행 가능)
+
+**백엔드 선행 작업 진행 중**:
+- Gateway gRPC-Web 지원 추가
+- Envoy 프록시 또는 grpcweb 패키지 통합
 
 ### Phase 7: 품질 & 접근성
 **기간**: 1주
