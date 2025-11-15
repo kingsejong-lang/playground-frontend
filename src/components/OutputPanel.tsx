@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { ExecuteResponse } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
+import { AnsiText, stripAnsi } from '@/lib/ansi-parser';
 
 interface OutputPanelProps {
   output: ExecuteResponse | null;
@@ -19,6 +20,7 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [showLineNumbers, setShowLineNumbers] = useState(false);
 
   // Auto-scroll to bottom when new content arrives
   useEffect(() => {
@@ -27,12 +29,12 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
     }
   }, [output, streamEvents, autoScroll]);
 
-  // Extract all text content for copy/download/search
+  // Extract all text content for copy/download/search (strip ANSI codes)
   const getOutputText = (): string => {
-    if (error) return error;
+    if (error) return stripAnsi(error);
 
     if (streaming && streamEvents) {
-      return streamEvents.map(e => `[${e.type}] ${e.message}`).join('\n');
+      return streamEvents.map(e => stripAnsi(`[${e.type}] ${e.message}`)).join('\n');
     }
 
     if (!output) return '';
@@ -41,15 +43,15 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
     if (output.error) {
       lines.push(`Error: ${output.error.code}`);
-      lines.push(output.error.message);
-      if (output.error.details) lines.push(output.error.details);
+      lines.push(stripAnsi(output.error.message));
+      if (output.error.details) lines.push(stripAnsi(output.error.details));
     }
 
     output.events.forEach(event => {
       if (event.kind === 'KIND_COMPILE') {
-        lines.push(`[Compilation] ${event.message}`);
+        lines.push(stripAnsi(`[Compilation] ${event.message}`));
       } else {
-        lines.push(event.message);
+        lines.push(stripAnsi(event.message));
       }
     });
 
@@ -192,6 +194,17 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
             </button>
 
             <button
+              onClick={() => setShowLineNumbers(!showLineNumbers)}
+              className={`p-1.5 rounded transition-colors ${showLineNumbers ? 'text-blue-400 bg-blue-900/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              title="Toggle line numbers"
+              aria-label="Toggle line numbers"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
+            <button
               onClick={() => setAutoScroll(!autoScroll)}
               className={`p-1.5 rounded transition-colors ${autoScroll ? 'text-blue-400 bg-blue-900/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               title="Toggle auto-scroll"
@@ -271,18 +284,47 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
           const isStderr = event.kind === 'KIND_STDERR';
           const isCompile = event.kind === 'KIND_COMPILE';
 
+          // Split message into lines for line numbering
+          const lines = event.message.split('\n');
+
           return (
             <div key={index} className="mb-2">
               {isCompile && (
                 <div className="text-blue-400 text-sm mb-1">
-                  <span className="font-medium">Compilation:</span> {highlightText(event.message)}
+                  <span className="font-medium">Compilation:</span> <AnsiText>{event.message}</AnsiText>
                 </div>
               )}
               {isStdout && (
-                <pre className="text-gray-200 text-sm font-mono whitespace-pre-wrap">{highlightText(event.message)}</pre>
+                <div className="flex">
+                  {showLineNumbers && (
+                    <div className="flex-shrink-0 pr-4 text-gray-600 text-sm font-mono select-none border-r border-gray-800 mr-4">
+                      {lines.map((_, lineIdx) => (
+                        <div key={lineIdx} className="text-right" style={{ minWidth: '2.5rem' }}>
+                          {index + lineIdx + 1}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <pre className="text-gray-200 text-sm font-mono whitespace-pre-wrap flex-1">
+                    <AnsiText>{event.message}</AnsiText>
+                  </pre>
+                </div>
               )}
               {isStderr && (
-                <pre className="text-red-400 text-sm font-mono whitespace-pre-wrap">{highlightText(event.message)}</pre>
+                <div className="flex">
+                  {showLineNumbers && (
+                    <div className="flex-shrink-0 pr-4 text-gray-600 text-sm font-mono select-none border-r border-gray-800 mr-4">
+                      {lines.map((_, lineIdx) => (
+                        <div key={lineIdx} className="text-right" style={{ minWidth: '2.5rem' }}>
+                          {index + lineIdx + 1}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <pre className="text-red-400 text-sm font-mono whitespace-pre-wrap flex-1">
+                    <AnsiText>{event.message}</AnsiText>
+                  </pre>
+                </div>
               )}
             </div>
           );
