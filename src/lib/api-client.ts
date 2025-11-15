@@ -17,24 +17,51 @@ import * as schemas from './schemas';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 /**
+ * Fetches CSRF token from backend
+ */
+async function getCsrfToken(): Promise<string> {
+  try {
+    const response = await fetch(`${API_URL}/api/v1/csrf/token`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSRF token: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.csrf_token;
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+    throw error;
+  }
+}
+
+/**
  * Creates and configures the axios instance
  */
 function createAxiosInstance(): AxiosInstance {
   const instance = axios.create({
     baseURL: `${API_URL}/api/v1`,
+    withCredentials: true, // Include cookies in requests (httpOnly cookies)
     headers: {
       'Content-Type': 'application/json',
     },
     timeout: 30000, // 30 seconds
   });
 
-  // Request interceptor to include JWT token
+  // Request interceptor to include CSRF token
+  // Note: JWT tokens are now sent as httpOnly cookies automatically
   instance.interceptors.request.use(
-    (config) => {
+    async (config) => {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Add CSRF token for state-changing requests
+        const method = config.method?.toUpperCase();
+        if (method && ['POST', 'PUT', 'DELETE'].includes(method)) {
+          try {
+            const csrfToken = await getCsrfToken();
+            config.headers['X-CSRF-Token'] = csrfToken;
+          } catch (error) {
+            console.error('Failed to add CSRF token to request:', error);
+            // Continue with request even if CSRF token fetch fails
+            // Backend will reject the request with 403
+          }
         }
       }
       return config;

@@ -29,10 +29,9 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
 /**
  * Refresh token request schema
+ * Note: Refresh token is now sent as httpOnly cookie automatically
  */
-export const RefreshTokenRequestSchema = z.object({
-  refresh_token: z.string().min(1, 'Refresh token is required'),
-});
+export const RefreshTokenRequestSchema = z.object({});
 
 export type RefreshTokenRequest = z.infer<typeof RefreshTokenRequestSchema>;
 
@@ -61,9 +60,9 @@ export type Tokens = z.infer<typeof TokensSchema>;
 
 /**
  * Auth response schema (register/login)
+ * Note: Tokens are now set as httpOnly cookies by the backend
  */
 export const AuthResponseSchema = z.object({
-  tokens: TokensSchema,
   user: UserSchema,
 });
 
@@ -71,11 +70,10 @@ export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 
 /**
  * Refresh token response schema
+ * Note: New tokens are set as httpOnly cookies by the backend
  */
 export const RefreshTokenResponseSchema = z.object({
-  access_token: z.string().min(1),
-  refresh_token: z.string().min(1),
-  expires_in: z.number().int().positive(),
+  success: z.boolean(),
 });
 
 export type RefreshTokenResponse = z.infer<typeof RefreshTokenResponseSchema>;

@@ -1,14 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI, AuthResponse } from '@/lib/api';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-}
+import { authAPI, AuthResponse, User } from '@/lib/api-client';
 
 interface AuthContextType {
   user: User | null;
@@ -32,32 +25,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        const userData = await authAPI.getMe();
-        setUser(userData);
+      // Try to get user info using httpOnly cookie
+      const result = await authAPI.getMe();
+      if (result.ok) {
+        setUser(result.value);
       }
     } catch (error) {
       console.error('Failed to check auth:', error);
-      // Token might be expired, clear it
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // Cookie might be expired or invalid
+      // No need to manually clear - backend handles cookie expiration
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAuthResponse = (response: AuthResponse) => {
-    const { tokens, user } = response;
-    localStorage.setItem('access_token', tokens.access_token);
-    localStorage.setItem('refresh_token', tokens.refresh_token);
-    setUser(user);
+    // Tokens are now set as httpOnly cookies by the backend
+    // We only need to update the user state
+    setUser(response.user);
   };
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await authAPI.login({ email, password });
-      handleAuthResponse(response);
+      const result = await authAPI.login({ email, password });
+      if (result.ok) {
+        handleAuthResponse(result.value);
+      } else {
+        throw result.error;
+      }
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -66,8 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const response = await authAPI.register({ email, password, name });
-      handleAuthResponse(response);
+      const result = await authAPI.register({ email, password, name });
+      if (result.ok) {
+        handleAuthResponse(result.value);
+      } else {
+        throw result.error;
+      }
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -75,8 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    // Cookies are cleared by the backend on logout endpoint call
+    // For now, just clear the user state
+    // TODO: Call backend logout endpoint to clear httpOnly cookies
     setUser(null);
   };
 

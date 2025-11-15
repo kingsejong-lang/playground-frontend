@@ -452,14 +452,10 @@ export const grpcAuthAPI = {
 
     if (result.ok) {
       const response = result.value.toObject();
+      // Tokens are now set as httpOnly cookies by the backend
       return {
         ok: true,
         value: {
-          tokens: {
-            access_token: response.tokens?.accessToken || '',
-            refresh_token: response.tokens?.refreshToken || '',
-            expires_in: Number(response.tokens?.expiresIn) || 3600,
-          },
           user: {
             id: response.user?.id || '',
             email: response.user?.email || '',
@@ -490,14 +486,10 @@ export const grpcAuthAPI = {
 
     if (result.ok) {
       const response = result.value.toObject();
+      // Tokens are now set as httpOnly cookies by the backend
       return {
         ok: true,
         value: {
-          tokens: {
-            access_token: response.tokens?.accessToken || '',
-            refresh_token: response.tokens?.refreshToken || '',
-            expires_in: Number(response.tokens?.expiresIn) || 3600,
-          },
           user: {
             id: response.user?.id || '',
             email: response.user?.email || '',
@@ -524,13 +516,11 @@ export const grpcAuthAPI = {
     );
 
     if (result.ok) {
-      const response = result.value.toObject();
+      // Tokens are now set as httpOnly cookies by the backend
       return {
         ok: true,
         value: {
-          access_token: response.accessToken,
-          refresh_token: response.refreshToken,
-          expires_in: response.expiresIn,
+          success: true,
         },
       };
     }

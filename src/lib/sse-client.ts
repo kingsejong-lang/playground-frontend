@@ -78,6 +78,7 @@ export class SSEClient {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include httpOnly cookies
         body: JSON.stringify(this.config.requestBody),
         signal: this.abortController.signal,
       });
