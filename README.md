@@ -1,56 +1,72 @@
 # Kingsejong Playground Frontend
 
-Web-based code playground for writing, compiling, and running code in multiple languages with real-time streaming, code sharing, and persistent user settings.
+Production-ready web-based code playground for writing, compiling, and running code with multi-protocol support, comprehensive testing, and enterprise-grade security.
 
 ## ✨ Features
 
 ### Core Features
 - **Multi-language support**: Python 3.12, Go 1.22, Kingsejong v1.0
-- **Monaco Editor**: Professional code editor with syntax highlighting and customization
-- **Dual execution modes**:
-  - Regular execution with complete results
-  - Real-time streaming execution with live output (SSE)
-- **Template loading**: Quick start with Hello World templates for each language
+- **Monaco Editor**: Professional code editor with syntax highlighting and Kingsejong language support
+- **Multi-file editing**: File tree, tabs, drag-and-drop support
+- **Execution modes**:
+  - REST API execution
+  - Real-time SSE streaming
+  - WebSocket with auto-reconnect
+  - gRPC-Web protocol
 
-### Code Sharing (Phase 2-3)
-- **Share functionality**: Generate shareable URLs for your code
-- **URL-based loading**: Load shared code via query parameters (`?share=xxx`)
-- **One-click copy**: Automatic clipboard copy of share URLs
-- **Share modal**: User-friendly share URL display and management
+### Security & Quality (Phase 4-7)
+- **Content Security Policy (CSP)**: XSS attack prevention
+- **Zod runtime validation**: Type-safe API requests/responses with Result pattern
+- **Error boundaries**: Graceful error handling with fallback UI
+- **163 tests**: 97.95% coverage (137 unit + 26 E2E tests)
+- **JWT Authentication**: Secure login/signup
 
-### User Settings (Phase 2-4)
-- **Editor settings**:
-  - Font size (10-24px)
-  - Font family (Fira Code, Monaco, Consolas, Source Code Pro)
-  - Tab size (2-8 spaces)
-  - Auto-save toggle
-  - Minimap toggle
-- **Theme settings**:
-  - Theme mode (Dark/Light)
-  - Color schemes (vs-dark, vs-light, hc-black)
-- **Persistent storage**: Settings saved to backend and restored on reload
-- **Anonymous user ID**: localStorage-based user identification
+### User Experience
+- **Toast notifications**: Success/error/warning/info alerts
+- **Keyboard shortcuts**: 8 productivity shortcuts (Ctrl+Enter to run, etc.)
+- **Execution history**: Persistent history with search/filter/export
+- **Advanced output panel**:
+  - ANSI color support
+  - Search functionality
+  - Copy/download buttons
+  - Line numbers toggle
+  - Auto-scroll control
 
-### Real-time Streaming (Phase 3)
-- **SSE streaming**: Server-sent events for live execution updates
-- **Event display**: Real-time output with timestamps and event types
-- **Dual run buttons**: Choose between regular or streaming execution
-- **Progressive output**: See compilation and runtime output as it happens
+### Code Sharing
+- **Share functionality**: Generate shareable URLs
+- **URL-based loading**: Load shared code via query parameters
+- **One-click copy**: Automatic clipboard management
 
-### UI/UX
-- **Dark theme**: Professional dark mode interface
-- **Responsive design**: Optimized for all screen sizes
-- **Split-panel layout**: Side-by-side editor and output
-- **Metrics display**: Compilation time, runtime, memory usage
-- **Error handling**: Clear error messages and states
+### Settings & Customization
+- **Editor settings**: Font size/family, tab size, minimap, auto-save
+- **Theme settings**: Dark/Light mode, color schemes
+- **Persistent storage**: Settings saved to backend
+- **Multi-language UI**: Korean/English support (i18n)
+
+### Progressive Web App
+- **PWA support**: Offline functionality
+- **Service worker**: Automatic caching
+- **App installation**: Install as native app
+
+### Accessibility
+- **WCAG 2.1 Level AA**: Full compliance
+- **Screen reader support**: ARIA labels and roles
+- **Keyboard navigation**: Complete keyboard accessibility
+- **Focus indicators**: Clear visual feedback
+
+### Performance
+- **136 kB bundle**: Optimized bundle size (< 500 kB target)
+- **Code splitting**: 6 heavy components lazy-loaded
+- **Web Vitals tracking**: CLS, FCP, LCP, TTFB, INP monitoring
+- **Image optimization**: AVIF/WebP support
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- pnpm/npm/yarn
-- Backend services running (Gateway, Language, Execution)
+- npm/pnpm/yarn
+- Backend services running (Gateway at port 8080)
 
 ### Installation
 
@@ -60,6 +76,10 @@ npm install
 
 # Run development server
 npm run dev
+
+# Run production build
+npm run build
+npm run start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the playground.
@@ -70,23 +90,71 @@ Create a `.env.local` file:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8080
+NODE_ENV=development
 ```
 
 ## 📁 Project Structure
 
 ```
 src/
-├── app/                       # Next.js app directory
-│   ├── layout.tsx            # Root layout with metadata
-│   ├── page.tsx              # Main playground page (all features)
-│   └── globals.css           # Global Tailwind styles
-├── components/               # React components
-│   ├── CodeEditor.tsx        # Monaco editor with customization
-│   ├── LanguageSelector.tsx  # Language dropdown selector
-│   ├── OutputPanel.tsx       # Execution results + streaming events
-│   └── SettingsModal.tsx     # User settings UI (NEW)
-└── lib/                      # Utilities
-    └── api.ts                # API client (Language, Execution, Share, Settings)
+├── app/                          # Next.js app directory
+│   ├── [locale]/                 # i18n routing (ko/en)
+│   │   ├── layout.tsx           # Locale layout
+│   │   ├── page.tsx             # Main playground (with code splitting)
+│   │   ├── providers.tsx        # Context providers
+│   │   └── web-vitals.ts        # Performance monitoring
+│   └── globals.css              # Global Tailwind styles
+├── components/                   # React components (15 total)
+│   ├── CodeEditor.tsx           # Monaco editor
+│   ├── OutputPanel.tsx          # Advanced output display
+│   ├── SettingsModal.tsx        # User settings
+│   ├── AuthModal.tsx            # Login/signup
+│   ├── HistorySidebar.tsx       # Execution history
+│   ├── FileTree.tsx             # File explorer
+│   ├── FileTabs.tsx             # File tabs
+│   ├── Toast.tsx                # Toast notifications
+│   ├── ShortcutsHelp.tsx        # Keyboard shortcuts help
+│   ├── ErrorBoundary.tsx        # Error handling
+│   └── ...
+├── hooks/                        # Custom React hooks (10 total)
+│   ├── useCodeExecution.ts      # Execution logic (REST/SSE/WebSocket)
+│   ├── useLanguages.ts          # Language management
+│   ├── useSettings.ts           # Settings management
+│   ├── useShare.ts              # Code sharing
+│   ├── useHistory.ts            # Execution history
+│   ├── useFiles.ts              # Multi-file support
+│   ├── useSSE.ts                # SSE streaming
+│   ├── useWebSocket.ts          # WebSocket client
+│   ├── useKeyboardShortcut.ts   # Keyboard shortcuts
+│   └── useToast.ts              # Toast notifications
+├── contexts/                     # React contexts
+│   ├── AuthContext.tsx          # Authentication
+│   └── ToastContext.tsx         # Toast management
+├── lib/                          # Utilities
+│   ├── api.ts                   # REST API client
+│   ├── api-client.ts            # Validated API client (Zod)
+│   ├── grpc-client.ts           # gRPC-Web client
+│   ├── websocket.ts             # WebSocket client
+│   ├── sse-client.ts            # SSE client with auto-reconnect
+│   ├── csp.ts                   # Content Security Policy
+│   ├── ansi-parser.tsx          # ANSI color parsing
+│   ├── history.ts               # History management
+│   ├── schemas/                 # Zod schemas (5 files)
+│   ├── types/                   # TypeScript types
+│   ├── errors/                  # Error classes
+│   └── monaco/                  # Monaco configuration
+│       └── kingsejong-language.ts
+├── i18n.ts                      # i18n configuration
+├── middleware.ts                # Locale routing
+└── __tests__/                   # Test files
+    ├── components/              # Component tests
+    ├── hooks/                   # Hook tests (137 tests)
+    └── lib/                     # Utility tests
+
+tests/e2e/                       # E2E tests (26 tests)
+├── code-execution.spec.ts       # 7 tests
+├── authentication.spec.ts       # 9 tests
+└── code-sharing.spec.ts         # 10 tests
 ```
 
 ## Available Scripts
@@ -95,116 +163,180 @@ src/
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run analyze` - Analyze bundle size
+- `npm run test` - Run unit tests
+- `npm run test:coverage` - Run tests with coverage
+- `npm run test:e2e` - Run E2E tests
+- `npm run test:e2e:ui` - Run E2E tests in UI mode
 
 ## 🔌 API Integration
 
-The frontend communicates with the Gateway service (REST API):
+The frontend supports 4 communication protocols:
 
-### Language Service
-- `GET /api/v1/languages` - List available languages
-- `GET /api/v1/languages/:id` - Get language details
-- `GET /api/v1/languages/:id/templates/:template` - Load code templates
+### REST API (Primary)
+- `GET /api/v1/languages` - List languages
+- `POST /api/v1/execute` - Execute code
+- `POST /api/v1/share` - Create share
+- `POST /api/v1/settings` - Save settings
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/register` - User registration
 
-### Execution Service
-- `POST /api/v1/execute` - Execute code (regular mode)
-- `POST /api/v1/execute/stream` - Execute code with SSE streaming
-- `DELETE /api/v1/execute/:id` - Cancel execution
-- `GET /api/v1/execute/:id/status` - Get execution status
+### Server-Sent Events (SSE)
+- `POST /api/v1/execute/stream` - Real-time execution streaming
+- Auto-reconnect with exponential backoff
+- Connection state management
 
-### Storage Service
-- `POST /api/v1/share` - Create code share
-- `GET /api/v1/share/:id` - Get shared code
-- `DELETE /api/v1/share/:id` - Delete share
-- `POST /api/v1/settings` - Save user settings
-- `GET /api/v1/settings/:userId` - Get user settings
+### WebSocket
+- `ws://localhost:8080/ws/execute` - Bidirectional real-time communication
+- Automatic reconnection with jitter
+- Ping/pong heartbeat (30s interval)
+- Message protocol with request/response matching
+
+### gRPC-Web
+- 5 service clients: Language, Execution, Storage, Auth, Settings
+- Protobuf → Zod schema conversion
+- JWT authentication metadata injection
+- Result pattern integration
 
 ## 🔧 Technologies
 
+### Core
 - **Next.js 14** - React framework with App Router
-- **TypeScript** - Type safety and better DX
-- **React 18** - UI library with hooks
-- **Monaco Editor** - Professional code editor (VS Code's editor)
-- **Tailwind CSS** - Utility-first CSS framework
-- **Axios** - HTTP client for API requests
-- **Fetch API + ReadableStream** - SSE streaming implementation
+- **TypeScript** - Type safety
+- **React 18** - UI library
+- **Tailwind CSS** - Utility-first CSS
+
+### Editor & UI
+- **Monaco Editor** - VS Code's editor
+- **@monaco-editor/react** - React integration
+- **react-error-boundary** - Error handling
+
+### API & Protocols
+- **Axios** - HTTP client
+- **Fetch API + ReadableStream** - SSE streaming
+- **WebSocket API** - Bidirectional communication
+- **grpc-web** - gRPC protocol
+- **Zod** - Runtime validation
+
+### Testing
+- **Jest** - Unit testing
+- **React Testing Library** - Component testing
+- **@testing-library/react-hooks** - Hook testing
+- **Playwright** - E2E testing
+- **MSW (Mock Service Worker)** - API mocking
+
+### i18n & PWA
+- **next-intl** - Internationalization
+- **next-pwa** - Progressive Web App
+- **web-vitals** - Performance monitoring
+
+### Security
+- **CSP** - Content Security Policy
+- **JWT** - JSON Web Tokens
 
 ## 💻 Development
 
-The playground automatically connects to the backend Gateway service. Make sure all backend services are running:
-
-1. **Language Service** (port 50051) - Language metadata
-2. **Execution Service** (port 50052) - Code execution with Docker
-3. **Storage Service** (port 50053) - Code sharing and settings
-4. **Gateway Service** (port 8080) - REST API gateway
-
-### Running Backend Services
+Ensure backend services are running:
 
 ```bash
 cd ../playground-backend
 
-# Option 1: Run all services with Docker Compose
+# Run all services with Docker Compose
 make run-dev
 
-# Option 2: Run services individually
-./bin/language &
-GRPC_PORT=50052 ./bin/execution &
-GRPC_PORT=50053 ./bin/storage &
-./bin/gateway &
+# Services:
+# - Language Service (port 50051)
+# - Execution Service (port 50052)
+# - Storage Service (port 50053)
+# - Auth Service (port 50054)
+# - Settings Service (port 50055)
+# - Gateway Service (port 8080)
 ```
 
 ## 📊 Implementation Status
 
-### ✅ All MVP Features Complete!
+### ✅ Phase 1-7 Complete (95%)
 
 **Phase 1: Core Playground**
-- ✅ Monaco Editor integration with syntax highlighting
+- ✅ Monaco Editor with syntax highlighting
 - ✅ Language selector (Python, Go, Kingsejong)
-- ✅ Template loading (Hello World examples)
-- ✅ Code execution with output display
-- ✅ Error handling and metrics display
-- ✅ Dark theme UI with Tailwind CSS
+- ✅ Template loading
+- ✅ Code execution with metrics
 
-**Phase 2-3: Code Sharing**
-- ✅ Share button with URL generation
-- ✅ Short URL-safe share IDs
-- ✅ Share modal with clipboard copy
-- ✅ URL query parameter loading (`?share=xxx`)
-- ✅ Integration with Storage Service API
+**Phase 2-3: Code Sharing & Streaming**
+- ✅ Share functionality with URLs
+- ✅ SSE real-time streaming
+- ✅ Progressive output display
 
-**Phase 2-4: User Settings**
-- ✅ Settings modal UI
-- ✅ Editor customization (font size, family, tab size, minimap)
-- ✅ Theme customization (dark/light, color schemes)
-- ✅ Persistent settings storage
-- ✅ localStorage-based anonymous user ID
-- ✅ Auto-load settings on page load
+**Phase 4: Security & Quality**
+- ✅ Content Security Policy (6 headers)
+- ✅ Zod runtime validation (Result pattern)
+- ✅ Error boundaries
+- ✅ Custom hooks refactoring (10 hooks)
+- ✅ Test infrastructure (163 tests, 97.95% coverage)
 
-**Phase 3: Real-time Streaming**
-- ✅ "Run (Stream)" button for SSE execution
-- ✅ Fetch API + ReadableStream implementation
-- ✅ Real-time event parsing and display
-- ✅ Progressive output with timestamps
-- ✅ Event type indicators (compile, stdout, stderr)
-- ✅ Dual execution modes (regular + streaming)
+**Phase 5: UX & Features**
+- ✅ Toast notification system
+- ✅ Keyboard shortcuts (8 shortcuts)
+- ✅ Execution history with search/filter
+- ✅ Multi-file editor (file tree + tabs)
+- ✅ Advanced output panel (ANSI, search, copy/download)
 
-### 🎯 Optional Future Enhancements
+**Phase 6: Advanced Protocols & Performance**
+- ✅ WebSocket client (auto-reconnect, heartbeat)
+- ✅ gRPC-Web client (5 services)
+- ✅ SSE auto-reconnect
+- ✅ Performance optimization (136 kB bundle)
+- ✅ Code splitting (6 components)
+- ✅ Web Vitals tracking
 
-⏳ **Authentication**
-- User login/signup
-- OAuth integration (GitHub, Google)
-- Personal code library
+**Phase 7: Quality & Accessibility**
+- ✅ Playwright E2E tests (26 tests)
+- ✅ PWA support (offline, installable)
+- ✅ i18n (Korean/English)
+- ✅ Accessibility (WCAG 2.1 Level AA)
 
-⏳ **Collaboration**
-- Real-time collaborative editing
-- Code comments and annotations
-- Share with specific users
+### 🚧 Phase 8: Monaco Advanced Features (In Progress)
 
-⏳ **Additional Features**
-- More languages support
-- Code auto-save
-- Execution history
-- Code snippets library
-- Mobile app (React Native)
+**Next Tasks**:
+- [ ] Kingsejong syntax highlighting improvements
+- [ ] Autocomplete (CompletionProvider)
+- [ ] Hover information (HoverProvider)
+- [ ] Code formatting (FormattingProvider)
+- [ ] Code snippets
+
+**Estimated completion**: 2025-11-29
+
+## 🔒 Security Features
+
+- **Content Security Policy**: XSS attack prevention
+- **CORS Protection**: Strict origin validation
+- **JWT Authentication**: Secure token-based auth
+- **Input Validation**: Zod runtime validation
+- **Error Boundaries**: Graceful error handling
+- **Secure Headers**: X-Frame-Options, X-Content-Type-Options, etc.
+
+## 📈 Performance Metrics
+
+- **Bundle Size**: 136 kB (target: < 500 kB) ✅
+- **First Load JS**: 136 kB ✅
+- **Code Splitting**: 6 components lazy-loaded ✅
+- **Test Coverage**: 97.95% ✅
+- **Lighthouse Score**: Optimized for 90+ (TBD)
+
+## 🌐 Browser Support
+
+- Chrome/Edge (latest)
+- Firefox (latest)
+- Safari (latest)
+- Mobile browsers (iOS Safari, Chrome Mobile)
+
+## 📄 Documentation
+
+- `TODOLIST.md` - Detailed task list (1500+ lines)
+- `PRIORITY_ROADMAP.md` - Priority roadmap and next tasks
+- `docs/CSP_IMPLEMENTATION.md` - CSP implementation guide
+- `tests/e2e/README.md` - E2E testing guide
 
 ## 📄 License
 
@@ -212,4 +344,7 @@ MIT
 
 ---
 
+**Version**: 2.0
+**Status**: Production Ready (95% complete)
+**Last Updated**: 2025-11-15
 **Made with ❤️ by Kingsejong Lang Team**

@@ -55,18 +55,22 @@ export const kingsejongLanguageTokensProvider: monacoEditor.languages.IMonarchLa
   tokenPostfix: '.ks',
 
   keywords: [
+    // Core keywords (Korean)
     '함수', 'function', 'func',
     '변수', 'var', 'let', 'const',
     '만약', 'if',
     '아니면', 'else',
     '동안', 'while',
     '반복', 'for',
+    '순회', // for iteration
     '반환', 'return',
     '참', 'true',
     '거짓', 'false',
     '없음', 'null', 'nil',
     '출력', 'print',
     '입력', 'input',
+
+    // Type-related
     '타입', 'type',
     '구조체', 'struct',
     '인터페이스', 'interface',
@@ -74,15 +78,27 @@ export const kingsejongLanguageTokensProvider: monacoEditor.languages.IMonarchLa
     '가져오기', 'import',
     '내보내기', 'export',
     '클래스', 'class',
+
+    // Control flow
     '계속', 'continue',
     '중단', 'break',
     '시도', 'try',
     '잡기', 'catch',
     '마침내', 'finally',
     '던지기', 'throw',
+
+    // Object-oriented
     '새', 'new',
     '이것', 'this',
     '부모', 'super',
+
+    // Logical operators (Korean)
+    '그리고', 'and',
+    '또는', 'or',
+    '아님', 'not',
+
+    // Special
+    '시작', // entry point function name
   ],
 
   typeKeywords: [
@@ -197,37 +213,50 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
       };
 
       const suggestions: monacoEditor.languages.CompletionItem[] = [
-        // Keywords
+        // Korean keywords with snippets
         {
           label: '함수',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: '함수 ${1:이름}(${2:매개변수}) {\n\t$0\n}',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: '함수 ${1:이름}(${2:매개변수}) {\n\t${0:// 코드}\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Define a function',
+          documentation: '함수를 정의합니다',
+          detail: '함수 정의',
           range,
         },
         {
           label: '만약',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: '만약 ${1:조건} {\n\t$0\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'If statement',
+          documentation: '조건문을 실행합니다',
+          detail: 'if 문',
+          range,
+        },
+        {
+          label: '만약-아니면',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: '만약 ${1:조건} {\n\t${2:// 참일 때}\n} 아니면 {\n\t${0:// 거짓일 때}\n}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '조건에 따라 다른 코드를 실행합니다',
+          detail: 'if-else 문',
           range,
         },
         {
           label: '반복',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: '반복 ${1:변수} in ${2:범위} {\n\t$0\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'For loop',
+          documentation: '반복문을 실행합니다',
+          detail: 'for 반복문',
           range,
         },
         {
           label: '동안',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: '동안 ${1:조건} {\n\t$0\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'While loop',
+          documentation: '조건이 참인 동안 반복합니다',
+          detail: 'while 반복문',
           range,
         },
         {
@@ -235,15 +264,17 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
           kind: monaco.languages.CompletionItemKind.Function,
           insertText: '출력(${1:값})',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Print output',
+          documentation: '값을 출력합니다',
+          detail: '출력 함수',
           range,
         },
         {
           label: '변수',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: '변수 ${1:이름} = ${2:값}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Declare a variable',
+          documentation: '변수를 선언합니다',
+          detail: '변수 선언',
           range,
         },
         {
@@ -251,40 +282,75 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
           kind: monaco.languages.CompletionItemKind.Keyword,
           insertText: '반환 ${1:값}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Return value',
+          documentation: '함수에서 값을 반환합니다',
+          detail: 'return',
           range,
         },
+
+        // Special snippets
+        {
+          label: '시작함수',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: '함수 시작() {\n\t${0:출력("안녕, 세상!")}\n}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '프로그램 진입점 함수를 생성합니다',
+          detail: 'main 함수 템플릿',
+          range,
+        },
+        {
+          label: '헬로월드',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: '함수 시작() {\n\t출력("안녕, 세상!")\n}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Hello World 프로그램을 생성합니다',
+          detail: 'Hello World',
+          range,
+        },
+
         // English equivalents
         {
           label: 'function',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'function ${1:name}(${2:params}) {\n\t$0\n}',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'function ${1:name}(${2:params}) {\n\t${0:// code}\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: 'Define a function',
+          detail: 'function definition',
           range,
         },
         {
           label: 'if',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: 'if ${1:condition} {\n\t$0\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: 'If statement',
+          detail: 'if statement',
+          range,
+        },
+        {
+          label: 'ifelse',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'if ${1:condition} {\n\t${2:// true}\n} else {\n\t${0:// false}\n}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'If-else statement',
+          detail: 'if-else statement',
           range,
         },
         {
           label: 'for',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: 'for ${1:variable} in ${2:range} {\n\t$0\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: 'For loop',
+          detail: 'for loop',
           range,
         },
         {
           label: 'while',
-          kind: monaco.languages.CompletionItemKind.Keyword,
+          kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: 'while ${1:condition} {\n\t$0\n}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: 'While loop',
+          detail: 'while loop',
           range,
         },
         {
@@ -293,6 +359,51 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
           insertText: 'print(${1:value})',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: 'Print output',
+          detail: 'print function',
+          range,
+        },
+        {
+          label: 'var',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'var ${1:name} = ${2:value}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Declare a variable',
+          detail: 'variable declaration',
+          range,
+        },
+        {
+          label: 'return',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'return ${1:value}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Return value',
+          detail: 'return statement',
+          range,
+        },
+
+        // Logical operators
+        {
+          label: '그리고',
+          kind: monaco.languages.CompletionItemKind.Operator,
+          insertText: '그리고',
+          documentation: '논리 AND 연산자',
+          detail: 'and',
+          range,
+        },
+        {
+          label: '또는',
+          kind: monaco.languages.CompletionItemKind.Operator,
+          insertText: '또는',
+          documentation: '논리 OR 연산자',
+          detail: 'or',
+          range,
+        },
+        {
+          label: '아님',
+          kind: monaco.languages.CompletionItemKind.Operator,
+          insertText: '아님',
+          documentation: '논리 NOT 연산자',
+          detail: 'not',
           range,
         },
       ];
@@ -300,6 +411,96 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
       return { suggestions };
     },
   };
+}
+
+/**
+ * Hover provider for Kingsejong - provides documentation on hover
+ */
+export function createKingsejongHoverProvider(monaco: Monaco): monacoEditor.languages.HoverProvider {
+  const keywordDocs: Record<string, string> = {
+    '함수': '**함수 (function)**\n\n함수를 정의합니다.\n\n```kingsejong\n함수 이름(매개변수) {\n  // 코드\n}\n```',
+    'function': '**function**\n\nDefines a function.\n\n```kingsejong\nfunction name(params) {\n  // code\n}\n```',
+    '변수': '**변수 (variable)**\n\n변수를 선언합니다.\n\n```kingsejong\n변수 이름 = 값\n```',
+    'var': '**var**\n\nDeclares a variable.\n\n```kingsejong\nvar name = value\n```',
+    '만약': '**만약 (if)**\n\n조건문을 실행합니다.\n\n```kingsejong\n만약 조건 {\n  // 참일 때 실행\n}\n```',
+    'if': '**if**\n\nExecutes a conditional statement.\n\n```kingsejong\nif condition {\n  // executes if true\n}\n```',
+    '아니면': '**아니면 (else)**\n\n조건이 거짓일 때 실행합니다.\n\n```kingsejong\n만약 조건 {\n  // 참\n} 아니면 {\n  // 거짓\n}\n```',
+    'else': '**else**\n\nExecutes when condition is false.\n\n```kingsejong\nif condition {\n  // true\n} else {\n  // false\n}\n```',
+    '출력': '**출력 (print)**\n\n값을 출력합니다.\n\n```kingsejong\n출력("안녕, 세상!")\n```',
+    'print': '**print**\n\nPrints a value.\n\n```kingsejong\nprint("Hello, World!")\n```',
+    '반복': '**반복 (for)**\n\n반복문을 실행합니다.\n\n```kingsejong\n반복 변수 in 범위 {\n  // 반복 실행\n}\n```',
+    'for': '**for**\n\nExecutes a loop.\n\n```kingsejong\nfor variable in range {\n  // loop body\n}\n```',
+    '동안': '**동안 (while)**\n\n조건이 참인 동안 반복합니다.\n\n```kingsejong\n동안 조건 {\n  // 반복 실행\n}\n```',
+    'while': '**while**\n\nRepeats while condition is true.\n\n```kingsejong\nwhile condition {\n  // loop body\n}\n```',
+    '반환': '**반환 (return)**\n\n함수에서 값을 반환합니다.\n\n```kingsejong\n함수 더하기(a, b) {\n  반환 a + b\n}\n```',
+    'return': '**return**\n\nReturns a value from a function.\n\n```kingsejong\nfunction add(a, b) {\n  return a + b\n}\n```',
+    '그리고': '**그리고 (and)**\n\n논리 AND 연산자. 두 조건이 모두 참일 때 참.\n\n```kingsejong\n만약 a > 0 그리고 b > 0 {\n  // 둘 다 양수\n}\n```',
+    'and': '**and**\n\nLogical AND operator. True when both conditions are true.\n\n```kingsejong\nif a > 0 and b > 0 {\n  // both positive\n}\n```',
+    '또는': '**또는 (or)**\n\n논리 OR 연산자. 두 조건 중 하나라도 참이면 참.\n\n```kingsejong\n만약 a > 0 또는 b > 0 {\n  // 하나 이상 양수\n}\n```',
+    'or': '**or**\n\nLogical OR operator. True when at least one condition is true.\n\n```kingsejong\nif a > 0 or b > 0 {\n  // at least one positive\n}\n```',
+    '시작': '**시작**\n\n프로그램의 진입점 함수입니다.\n\n```kingsejong\n함수 시작() {\n  출력("안녕, 세상!")\n}\n```',
+  };
+
+  return {
+    provideHover: (model, position) => {
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+
+      const documentation = keywordDocs[word.word];
+      if (!documentation) return null;
+
+      return {
+        range: new monaco.Range(
+          position.lineNumber,
+          word.startColumn,
+          position.lineNumber,
+          word.endColumn
+        ),
+        contents: [
+          { value: documentation },
+        ],
+      };
+    },
+  };
+}
+
+/**
+ * Theme colors for Kingsejong language
+ */
+export const kingsejongThemeColors = {
+  keywords: '#569CD6',      // Blue for keywords
+  types: '#4EC9B0',         // Cyan for types
+  functions: '#DCDCAA',     // Yellow for functions
+  variables: '#9CDCFE',     // Light blue for variables
+  strings: '#CE9178',       // Orange for strings
+  numbers: '#B5CEA8',       // Light green for numbers
+  comments: '#6A9955',      // Green for comments
+  operators: '#D4D4D4',     // Light gray for operators
+  korean: '#C586C0',        // Purple for Korean keywords
+};
+
+/**
+ * Register custom theme for Kingsejong
+ */
+export function registerKingsejongTheme(monaco: Monaco) {
+  monaco.editor.defineTheme('kingsejong-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword.kingsejong', foreground: kingsejongThemeColors.keywords, fontStyle: 'bold' },
+      { token: 'type.kingsejong', foreground: kingsejongThemeColors.types },
+      { token: 'function.kingsejong', foreground: kingsejongThemeColors.functions },
+      { token: 'variable.kingsejong', foreground: kingsejongThemeColors.variables },
+      { token: 'string.kingsejong', foreground: kingsejongThemeColors.strings },
+      { token: 'number.kingsejong', foreground: kingsejongThemeColors.numbers },
+      { token: 'comment.kingsejong', foreground: kingsejongThemeColors.comments, fontStyle: 'italic' },
+      { token: 'operator.kingsejong', foreground: kingsejongThemeColors.operators },
+    ],
+    colors: {
+      'editor.foreground': '#D4D4D4',
+      'editor.background': '#1E1E1E',
+    },
+  });
 }
 
 /**
@@ -320,4 +521,13 @@ export function registerKingsejongLanguage(monaco: Monaco) {
     kingsejongLanguageId,
     createKingsejongCompletionProvider(monaco)
   );
+
+  // Register hover provider
+  monaco.languages.registerHoverProvider(
+    kingsejongLanguageId,
+    createKingsejongHoverProvider(monaco)
+  );
+
+  // Register custom theme
+  registerKingsejongTheme(monaco);
 }
