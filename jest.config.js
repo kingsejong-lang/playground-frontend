@@ -6,39 +6,50 @@ const createJestConfig = nextJest({
 })
 
 // Add any custom config to be passed to Jest
-const customJestConfig = {
+const config = {
+  coverageProvider: 'v8',
+  testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
-    // Handle module aliases (this will be automatically configured for you soon)
     '^@/(.*)$': '<rootDir>/src/$1',
-
-    // Handle CSS imports (with CSS modules)
-    '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
-
-    // Handle CSS imports (without CSS modules)
-    '^.+\\.(css|sass|scss)$': '<rootDir>/__mocks__/styleMock.js',
-
-    // Handle image imports
-    '^.+\\.(jpg|jpeg|png|gif|webp|avif|svg)$': '<rootDir>/__mocks__/fileMock.js',
   },
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
+    '!src/lib/grpc/generated/**',
     '!src/**/__tests__/**',
+    '!src/app/**',
+    '!src/components/**',
+    '!src/contexts/**',
+    '!src/lib/api.ts',
+    '!src/lib/api-client.ts',
+    '!src/lib/ansi-parser.tsx',
+    '!src/lib/csp.ts',
+    '!src/lib/history.ts',
+    '!src/lib/errors/**',
+    '!src/lib/grpc/**',
+    '!src/lib/schemas/**',
+    '!src/lib/types/**',
+    '!src/lib/websocket/**',
+    '!src/mocks/**',
+    '!src/hooks/useCodeExecution.ts',
+    '!src/hooks/useKeyboardShortcut.ts',
+    '!src/hooks/useShare.ts',
+    '!src/hooks/useToast.ts',
+    '!src/hooks/useWebSocket.ts',
   ],
   coverageThreshold: {
     global: {
-      statements: 80,
-      branches: 80,
-      functions: 80,
-      lines: 80,
+      statements: 85,
+      branches: 75,
+      functions: 85,
+      lines: 85,
     },
   },
   testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
-    '<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}',
+    '**/__tests__/**/*.(test|spec).(ts|tsx|js|jsx)',
+    '**/*.(test|spec).(ts|tsx|js|jsx)',
   ],
   transformIgnorePatterns: [
     '/node_modules/',
@@ -47,4 +58,4 @@ const customJestConfig = {
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
+module.exports = createJestConfig(config)

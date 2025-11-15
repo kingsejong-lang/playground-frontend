@@ -1,5 +1,14 @@
 // Learn more: https://github.com/testing-library/jest-dom
+const { TextEncoder, TextDecoder } = require('util')
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+require('whatwg-fetch')
 require('@testing-library/jest-dom')
+
+// Note: MSW requires more polyfills (TransformStream, etc.) for Node environment
+// For now, we'll use Jest mocks instead of MSW
+// TODO: Add MSW when upgrading to Node 18+ which includes these APIs
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
