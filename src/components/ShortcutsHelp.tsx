@@ -50,6 +50,11 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
     },
     {
       category: 'UI',
+      keys: formatShortcut('h', { ctrl: true }),
+      description: 'Open history',
+    },
+    {
+      category: 'UI',
       keys: '?',
       description: 'Show keyboard shortcuts',
     },

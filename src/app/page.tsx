@@ -8,12 +8,15 @@ import OutputPanel from '@/components/OutputPanel';
 import SettingsModal from '@/components/SettingsModal';
 import AuthModal from '@/components/AuthModal';
 import { ShortcutsHelp } from '@/components/ShortcutsHelp';
+import HistorySidebar from '@/components/HistorySidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useShare } from '@/hooks/useShare';
 import { useSettings } from '@/hooks/useSettings';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import { useHistory } from '@/hooks/useHistory';
+import { HistoryItem } from '@/lib/history';
 
 // Force dynamic rendering for URL search params
 export const dynamic = 'force-dynamic';
@@ -67,9 +70,31 @@ function PlaygroundContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // History hook
+  const history = useHistory();
 
   // Combined error
   const error = languageError || executionError || shareError || settingsError;
+
+  // Load history item
+  const handleLoadHistory = (item: HistoryItem) => {
+    setCode(item.code);
+    setSelectedLanguage(item.language);
+  };
+
+  // Save to history when execution completes
+  useEffect(() => {
+    if (output && !executing && !streaming) {
+      history.addItem({
+        language: selectedLanguage,
+        code,
+        output,
+        success: output.success,
+      });
+    }
+  }, [output, executing, streaming]);
 
   // Keyboard shortcuts
   useKeyboardShortcut('Enter', () => execute(code, selectedLanguage, languages), {
@@ -88,6 +113,10 @@ function PlaygroundContent() {
   });
 
   useKeyboardShortcut(',', () => setShowSettings(true), {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut('h', () => setShowHistory(prev => !prev), {
     ctrl: true,
   });
 
@@ -150,6 +179,12 @@ function PlaygroundContent() {
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
             >
               ⚙️ Settings
+            </button>
+            <button
+              onClick={() => setShowHistory(true)}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              📜 History
             </button>
 
             {/* Auth buttons */}
@@ -283,6 +318,14 @@ function PlaygroundContent() {
       <ShortcutsHelp
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
+      />
+
+      {/* History Sidebar */}
+      <HistorySidebar
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        onLoadHistory={handleLoadHistory}
+        languages={languages}
       />
     </div>
   );
