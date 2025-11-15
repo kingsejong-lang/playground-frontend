@@ -332,8 +332,6 @@ make run-dev
 
 ## 📄 Documentation
 
-- `docs/CSP_IMPLEMENTATION.md` - CSP implementation guide
-- `docs/MONACO_IMPROVEMENTS.md` - Monaco Editor improvements
 - `tests/e2e/README.md` - E2E testing guide
 
 ## 📄 License
