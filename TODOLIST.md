@@ -38,16 +38,35 @@
   - 비즈니스 로직과 UI 분리
   - Suspense 경계 추가
 
-### 🚧 부분 완료 (개선 필요)
-- SSE 구현 (수동 파싱, 재연결 로직 없음)
+- **SSE 자동 재연결** ✅ (2025-11-15)
+  - SSEClient 클래스 구현 (자동 재연결, exponential backoff)
+  - useSSE React 훅 생성
+  - 연결 상태 관리 (idle, connecting, connected, reconnecting, error)
+  - 최대 재시도 횟수 및 지연 시간 설정 가능
+  - useCodeExecution 통합
+- **E2E 테스트 인프라** ✅ (2025-11-15)
+  - Playwright 설정 및 26개 테스트 작성
+  - code-execution.spec.ts (7 tests)
+  - authentication.spec.ts (9 tests)
+  - code-sharing.spec.ts (10 tests)
+- **gRPC-Web 클라이언트** ✅ (2025-11-15)
+  - 5개 서비스 클라이언트 래퍼 (Language, Execution, Storage, Auth, Settings)
+  - protobuf → Zod schema 변환 함수
+  - Result 패턴 통합
+  - JWT 인증 메타데이터 자동 주입
 
-### ❌ 미완료 (중요)
-- 보안 기능 (CSRF 토큰)
-- WebSocket 프로토콜
-- gRPC-Web 프로토콜
-- 테스트 (0개 테스트 파일)
+### ❌ 미완료 (백엔드 구현 필요)
+- 보안 기능 (CSRF 토큰) - **백엔드 엔드포인트 필요**
+- 보안 기능 (httpOnly 쿠키) - **백엔드 구현 필요**
+  - 📝 상세 요구사항: `BACKEND_SECURITY_REQUIREMENTS.md` 참조
+
+### ❌ 미완료 (프론트엔드 작업 가능)
 - 키보드 단축키
 - 실행 히스토리
+- Monaco Editor 고급 기능 (Kingsejong 문법, 자동완성)
+- PWA 지원
+- 다국어 지원 (i18n)
+- 접근성 개선 (a11y)
 
 ### 🎯 백엔드 완료에 따른 다음 단계
 백엔드가 100% 완료됨에 따라 프론트엔드 개발에 집중할 수 있습니다:

@@ -116,75 +116,47 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       return;
     }
 
+    const lang = languages.find(l => l.id === language);
+    if (!lang) {
+      setError('Language not found');
+      return;
+    }
+
     setStreaming(true);
     setStreamEvents([]);
     setOutput(null);
     setError(null);
 
-    try {
-      const lang = languages.find(l => l.id === language);
-      if (!lang) {
-        setError('Language not found');
-        setStreaming(false);
-        return;
-      }
+    const extension = lang.extensions[0] || '.txt';
+    const filename = `main${extension}`;
 
-      const extension = lang.extensions[0] || '.txt';
-      const filename = `main${extension}`;
+    // Import SSEClient dynamically
+    const { SSEClient } = await import('@/lib/sse-client');
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${API_URL}/api/v1/execute/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    const client = new SSEClient({
+      url: '/api/v1/execute/stream',
+      requestBody: {
+        language,
+        files: {
+          [filename]: code,
         },
-        body: JSON.stringify({
-          language,
-          files: {
-            [filename]: code,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        setError('Stream failed to start');
+      },
+      maxRetries: 3,
+      initialRetryDelay: 1000,
+      maxRetryDelay: 10000,
+      onEvent: (event) => {
+        setStreamEvents((prev) => [...prev, event]);
+      },
+      onError: (err) => {
+        console.error('SSE error:', err);
+        setError(err.message);
+      },
+      onComplete: () => {
         setStreaming(false);
-        return;
-      }
+      },
+    });
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        setError('No reader available');
-        setStreaming(false);
-        return;
-      }
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            try {
-              const data = JSON.parse(line.substring(5).trim());
-              setStreamEvents((prev) => [...prev, data]);
-            } catch (e) {
-              console.error('Failed to parse SSE data:', e);
-            }
-          }
-        }
-      }
-    } catch (err: unknown) {
-      console.error('Stream execution failed:', err);
-      setError(extractErrorMessage(err));
-    } finally {
-      setStreaming(false);
-    }
+    await client.connect();
   }, []);
 
   const executeWebSocket = useCallback(async (
