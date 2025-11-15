@@ -2,7 +2,9 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import CodeEditor from '@/components/CodeEditor';
+import LanguageToggle from '@/components/LanguageToggle';
 import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
 import SettingsModal from '@/components/SettingsModal';
@@ -29,6 +31,7 @@ function PlaygroundContent() {
   const searchParams = useSearchParams();
   const { user, isAuthenticated, logout } = useAuth();
   const toast = useToast();
+  const t = useTranslations();
 
   // Custom hooks
   const {
@@ -199,10 +202,11 @@ function PlaygroundContent() {
       <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">킹세종 Playground</h1>
-            <p className="text-sm text-gray-400 mt-1">Write, compile, and run code in your browser</p>
+            <h1 className="text-2xl font-bold text-white">{t('app.title')}</h1>
+            <p className="text-sm text-gray-400 mt-1">{t('app.description')}</p>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageToggle />
             <LanguageSelector
               languages={languages}
               selectedLanguage={selectedLanguage}

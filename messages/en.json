@@ -1,0 +1,102 @@
+{
+  "app": {
+    "title": "Kingsejong Playground",
+    "description": "Write, compile, and run code in your browser"
+  },
+  "header": {
+    "files": "Files",
+    "share": "Share",
+    "sharing": "Sharing...",
+    "settings": "Settings",
+    "history": "History",
+    "login": "Login",
+    "logout": "Logout",
+    "run": "Run",
+    "running": "Running...",
+    "runStream": "Run (Stream)",
+    "streaming": "Streaming...",
+    "runWebSocket": "Run (WebSocket)",
+    "wsRunning": "WS Running..."
+  },
+  "editor": {
+    "output": "Output"
+  },
+  "share": {
+    "title": "Share Your Code",
+    "description": "Your code has been shared! The URL has been copied to clipboard.",
+    "copyAgain": "Copy Again",
+    "close": "Close"
+  },
+  "loading": {
+    "text": "Loading..."
+  },
+  "fileTree": {
+    "title": "File Explorer",
+    "addFile": "New File",
+    "rename": "Rename",
+    "delete": "Delete"
+  },
+  "fileTabs": {
+    "addFile": "Add File",
+    "close": "Close"
+  },
+  "settings": {
+    "title": "Settings",
+    "editor": {
+      "title": "Editor",
+      "fontSize": "Font Size",
+      "fontFamily": "Font Family",
+      "tabSize": "Tab Size",
+      "minimap": "Minimap"
+    },
+    "theme": {
+      "title": "Theme",
+      "colorScheme": "Color Scheme"
+    },
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "auth": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "login": "Login",
+    "register": "Register",
+    "close": "Close",
+    "switchToRegister": "Don't have an account? Register",
+    "switchToLogin": "Already have an account? Login"
+  },
+  "history": {
+    "title": "Execution History",
+    "empty": "No execution history",
+    "load": "Load",
+    "delete": "Delete",
+    "clear": "Clear All",
+    "success": "Success",
+    "failed": "Failed"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "run": "Run Code",
+    "runStream": "Run Stream",
+    "clear": "Clear Output",
+    "settings": "Open Settings",
+    "history": "Toggle History",
+    "help": "Toggle Help"
+  },
+  "output": {
+    "clear": "Clear",
+    "stdout": "Standard Output",
+    "stderr": "Standard Error",
+    "exitCode": "Exit Code",
+    "executionTime": "Execution Time"
+  },
+  "toast": {
+    "fileCreated": "File created",
+    "fileDeleted": "File deleted",
+    "fileRenamed": "File renamed",
+    "copied": "Copied to clipboard",
+    "error": "An error occurred"
+  }
+}

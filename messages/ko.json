@@ -1,0 +1,102 @@
+{
+  "app": {
+    "title": "킹세종 Playground",
+    "description": "브라우저에서 코드를 작성하고 실행하세요"
+  },
+  "header": {
+    "files": "파일",
+    "share": "공유",
+    "sharing": "공유 중...",
+    "settings": "설정",
+    "history": "기록",
+    "login": "로그인",
+    "logout": "로그아웃",
+    "run": "실행",
+    "running": "실행 중...",
+    "runStream": "실행 (스트림)",
+    "streaming": "스트리밍 중...",
+    "runWebSocket": "실행 (WebSocket)",
+    "wsRunning": "WS 실행 중..."
+  },
+  "editor": {
+    "output": "출력"
+  },
+  "share": {
+    "title": "코드 공유",
+    "description": "코드가 공유되었습니다! URL이 클립보드에 복사되었습니다.",
+    "copyAgain": "다시 복사",
+    "close": "닫기"
+  },
+  "loading": {
+    "text": "로딩 중..."
+  },
+  "fileTree": {
+    "title": "파일 탐색기",
+    "addFile": "새 파일",
+    "rename": "이름 변경",
+    "delete": "삭제"
+  },
+  "fileTabs": {
+    "addFile": "파일 추가",
+    "close": "닫기"
+  },
+  "settings": {
+    "title": "설정",
+    "editor": {
+      "title": "에디터",
+      "fontSize": "글꼴 크기",
+      "fontFamily": "글꼴",
+      "tabSize": "탭 크기",
+      "minimap": "미니맵"
+    },
+    "theme": {
+      "title": "테마",
+      "colorScheme": "색상 테마"
+    },
+    "save": "저장",
+    "cancel": "취소"
+  },
+  "auth": {
+    "title": "로그인",
+    "email": "이메일",
+    "password": "비밀번호",
+    "name": "이름",
+    "login": "로그인",
+    "register": "회원가입",
+    "close": "닫기",
+    "switchToRegister": "계정이 없으신가요? 회원가입",
+    "switchToLogin": "이미 계정이 있으신가요? 로그인"
+  },
+  "history": {
+    "title": "실행 기록",
+    "empty": "실행 기록이 없습니다",
+    "load": "불러오기",
+    "delete": "삭제",
+    "clear": "모두 삭제",
+    "success": "성공",
+    "failed": "실패"
+  },
+  "shortcuts": {
+    "title": "키보드 단축키",
+    "run": "코드 실행",
+    "runStream": "스트림 실행",
+    "clear": "출력 지우기",
+    "settings": "설정 열기",
+    "history": "기록 토글",
+    "help": "도움말 토글"
+  },
+  "output": {
+    "clear": "지우기",
+    "stdout": "표준 출력",
+    "stderr": "표준 에러",
+    "exitCode": "종료 코드",
+    "executionTime": "실행 시간"
+  },
+  "toast": {
+    "fileCreated": "파일이 생성되었습니다",
+    "fileDeleted": "파일이 삭제되었습니다",
+    "fileRenamed": "파일 이름이 변경되었습니다",
+    "copied": "클립보드에 복사되었습니다",
+    "error": "오류가 발생했습니다"
+  }
+}
