@@ -406,6 +406,177 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
           detail: 'not',
           range,
         },
+
+        // Advanced snippets - Class
+        {
+          label: '클래스',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '클래스 ${1:이름} {',
+            '\t변수 ${2:속성}',
+            '',
+            '\t함수 생성자(${3:매개변수}) {',
+            '\t\t이것.${2:속성} = ${3:매개변수}',
+            '\t}',
+            '',
+            '\t함수 ${4:메서드}() {',
+            '\t\t${0:// 코드}',
+            '\t}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '클래스를 정의합니다',
+          detail: 'class template',
+          range,
+        },
+        {
+          label: 'class',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            'class ${1:Name} {',
+            '\tvar ${2:property}',
+            '',
+            '\tfunction constructor(${3:params}) {',
+            '\t\tthis.${2:property} = ${3:params}',
+            '\t}',
+            '',
+            '\tfunction ${4:method}() {',
+            '\t\t${0:// code}',
+            '\t}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Define a class',
+          detail: 'class template',
+          range,
+        },
+
+        // Advanced snippets - Module
+        {
+          label: '모듈',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '패키지 ${1:이름}',
+            '',
+            '가져오기 ${2:의존성}',
+            '',
+            '함수 ${3:공개함수}() {',
+            '\t${0:// 공개 API}',
+            '}',
+            '',
+            '내보내기 { ${3:공개함수} }',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '모듈 구조를 생성합니다',
+          detail: 'module template',
+          range,
+        },
+
+        // Advanced snippets - Try-Catch
+        {
+          label: '시도-잡기',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '시도 {',
+            '\t${1:// 시도할 코드}',
+            '} 잡기 (${2:오류}) {',
+            '\t${3:// 오류 처리}',
+            '} 마침내 {',
+            '\t${0:// 정리 코드}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '예외 처리 블록을 생성합니다',
+          detail: 'try-catch-finally',
+          range,
+        },
+        {
+          label: 'trycatch',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            'try {',
+            '\t${1:// code to try}',
+            '} catch (${2:error}) {',
+            '\t${3:// error handling}',
+            '} finally {',
+            '\t${0:// cleanup}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Try-catch-finally block',
+          detail: 'try-catch-finally',
+          range,
+        },
+
+        // Advanced snippets - Switch (if supported)
+        {
+          label: '선택',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '만약 ${1:값} == ${2:경우1} {',
+            '\t${3:// 처리1}',
+            '} 아니면 만약 ${1:값} == ${4:경우2} {',
+            '\t${5:// 처리2}',
+            '} 아니면 {',
+            '\t${0:// 기본 처리}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '다중 조건 분기를 생성합니다',
+          detail: 'multiple conditions',
+          range,
+        },
+
+        // Advanced snippets - Array iteration
+        {
+          label: '배열반복',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '변수 ${1:배열} = [${2:요소들}]',
+            '반복 ${3:항목} in ${1:배열} {',
+            '\t출력(${3:항목})',
+            '\t${0}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '배열을 순회합니다',
+          detail: 'array iteration',
+          range,
+        },
+
+        // Advanced snippets - Function with return
+        {
+          label: '반환함수',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '함수 ${1:이름}(${2:매개변수}) {',
+            '\t${3:// 계산}',
+            '\t반환 ${4:결과}',
+            '}',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '값을 반환하는 함수를 생성합니다',
+          detail: 'function with return',
+          range,
+        },
+
+        // Advanced snippets - Comment block
+        {
+          label: '주석블록',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: [
+            '/*',
+            ' * ${1:설명}',
+            ' * ',
+            ' * @param {${2:타입}} ${3:매개변수} - ${4:설명}',
+            ' * @return {${5:타입}} ${6:반환값 설명}',
+            ' */',
+          ].join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: '문서화 주석 블록을 생성합니다',
+          detail: 'documentation comment',
+          range,
+        },
       ];
 
       return { suggestions };
@@ -504,6 +675,197 @@ export function registerKingsejongTheme(monaco: Monaco) {
 }
 
 /**
+ * Document formatting provider for Kingsejong
+ * Formats code with proper indentation and spacing
+ */
+export function createKingsejongFormattingProvider(monaco: Monaco): monacoEditor.languages.DocumentFormattingEditProvider {
+  return {
+    provideDocumentFormattingEdits: (model, options) => {
+      const edits: monacoEditor.languages.TextEdit[] = [];
+      const text = model.getValue();
+      const lines = text.split('\n');
+
+      let indentLevel = 0;
+      const indentString = options.insertSpaces
+        ? ' '.repeat(options.tabSize)
+        : '\t';
+
+      const formattedLines: string[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+
+        // Skip empty lines
+        if (line === '') {
+          formattedLines.push('');
+          continue;
+        }
+
+        // Decrease indent for closing braces
+        if (line.startsWith('}')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+
+        // Apply indentation
+        const indentedLine = indentString.repeat(indentLevel) + line;
+        formattedLines.push(indentedLine);
+
+        // Increase indent for opening braces
+        if (line.endsWith('{')) {
+          indentLevel++;
+        }
+
+        // Decrease indent after closing brace if it's not at the start
+        if (line.endsWith('}') && !line.startsWith('}')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+      }
+
+      const formattedText = formattedLines.join('\n');
+
+      // Create a single edit to replace all text
+      const fullRange = model.getFullModelRange();
+      edits.push({
+        range: fullRange,
+        text: formattedText,
+      });
+
+      return edits;
+    },
+  };
+}
+
+/**
+ * Document range formatting provider for Kingsejong
+ * Formats selected code range
+ */
+export function createKingsejongRangeFormattingProvider(monaco: Monaco): monacoEditor.languages.DocumentRangeFormattingEditProvider {
+  return {
+    provideDocumentRangeFormattingEdits: (model, range, options) => {
+      const edits: monacoEditor.languages.TextEdit[] = [];
+
+      // Get the selected text
+      const startLine = range.startLineNumber;
+      const endLine = range.endLineNumber;
+
+      let indentLevel = 0;
+      const indentString = options.insertSpaces
+        ? ' '.repeat(options.tabSize)
+        : '\t';
+
+      // Calculate initial indent level by checking previous lines
+      for (let i = 1; i < startLine; i++) {
+        const line = model.getLineContent(i).trim();
+        if (line.endsWith('{')) indentLevel++;
+        if (line.startsWith('}')) indentLevel = Math.max(0, indentLevel - 1);
+      }
+
+      const formattedLines: string[] = [];
+
+      for (let i = startLine; i <= endLine; i++) {
+        let line = model.getLineContent(i).trim();
+
+        // Skip empty lines
+        if (line === '') {
+          formattedLines.push('');
+          continue;
+        }
+
+        // Decrease indent for closing braces
+        if (line.startsWith('}')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+
+        // Apply indentation
+        const indentedLine = indentString.repeat(indentLevel) + line;
+        formattedLines.push(indentedLine);
+
+        // Increase indent for opening braces
+        if (line.endsWith('{')) {
+          indentLevel++;
+        }
+
+        // Decrease indent after closing brace if it's not at the start
+        if (line.endsWith('}') && !line.startsWith('}')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+      }
+
+      const formattedText = formattedLines.join('\n');
+
+      edits.push({
+        range: new monaco.Range(startLine, 1, endLine, model.getLineMaxColumn(endLine)),
+        text: formattedText,
+      });
+
+      return edits;
+    },
+  };
+}
+
+/**
+ * On-type formatting provider for Kingsejong
+ * Formats code as you type (e.g., auto-indent on newline)
+ */
+export function createKingsejongOnTypeFormattingProvider(monaco: Monaco): monacoEditor.languages.OnTypeFormattingEditProvider {
+  return {
+    autoFormatTriggerCharacters: ['\n', '}'],
+
+    provideOnTypeFormattingEdits: (model, position, ch, options) => {
+      const edits: monacoEditor.languages.TextEdit[] = [];
+
+      if (ch === '\n') {
+        // Auto-indent on newline
+        const currentLine = position.lineNumber;
+        const previousLine = currentLine - 1;
+
+        if (previousLine > 0) {
+          const previousLineText = model.getLineContent(previousLine).trim();
+          const previousLineIndent = model.getLineContent(previousLine).match(/^\s*/)?.[0] || '';
+
+          // If previous line ends with {, increase indent
+          if (previousLineText.endsWith('{')) {
+            const indentString = options.insertSpaces
+              ? ' '.repeat(options.tabSize)
+              : '\t';
+            const newIndent = previousLineIndent + indentString;
+
+            edits.push({
+              range: new monaco.Range(currentLine, 1, currentLine, 1),
+              text: newIndent,
+            });
+          } else {
+            // Keep same indent
+            edits.push({
+              range: new monaco.Range(currentLine, 1, currentLine, 1),
+              text: previousLineIndent,
+            });
+          }
+        }
+      } else if (ch === '}') {
+        // Auto-dedent on closing brace
+        const currentLine = position.lineNumber;
+        const lineText = model.getLineContent(currentLine);
+        const currentIndent = lineText.match(/^\s*/)?.[0] || '';
+
+        if (currentIndent.length > 0) {
+          const indentSize = options.insertSpaces ? options.tabSize : 1;
+          const newIndentLength = Math.max(0, currentIndent.length - indentSize);
+          const newIndent = currentIndent.substring(0, newIndentLength);
+
+          edits.push({
+            range: new monaco.Range(currentLine, 1, currentLine, currentIndent.length + 1),
+            text: newIndent,
+          });
+        }
+      }
+
+      return edits;
+    },
+  };
+}
+
+/**
  * Register Kingsejong language with Monaco
  */
 export function registerKingsejongLanguage(monaco: Monaco) {
@@ -526,6 +888,24 @@ export function registerKingsejongLanguage(monaco: Monaco) {
   monaco.languages.registerHoverProvider(
     kingsejongLanguageId,
     createKingsejongHoverProvider(monaco)
+  );
+
+  // Register document formatting provider
+  monaco.languages.registerDocumentFormattingEditProvider(
+    kingsejongLanguageId,
+    createKingsejongFormattingProvider(monaco)
+  );
+
+  // Register document range formatting provider
+  monaco.languages.registerDocumentRangeFormattingEditProvider(
+    kingsejongLanguageId,
+    createKingsejongRangeFormattingProvider(monaco)
+  );
+
+  // Register on-type formatting provider
+  monaco.languages.registerOnTypeFormattingEditProvider(
+    kingsejongLanguageId,
+    createKingsejongOnTypeFormattingProvider(monaco)
   );
 
   // Register custom theme
