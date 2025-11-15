@@ -51,6 +51,7 @@ function PlaygroundContent() {
   const {
     languages,
     selectedLanguage,
+    code: defaultCode,
     loading: loadingLanguages,
     error: languageError,
     setSelectedLanguage,
@@ -115,6 +116,23 @@ function PlaygroundContent() {
 
   // Combined error
   const error = languageError || executionError || shareError || settingsError;
+
+  // Set initial code when language loads
+  useEffect(() => {
+    if (defaultCode && activeFile && !activeFile.content) {
+      updateFileContent(activeFile.id, defaultCode);
+    }
+  }, [defaultCode, activeFile?.id]);
+
+  // Update code when language changes
+  useEffect(() => {
+    if (defaultCode && activeFile) {
+      const isEmpty = !activeFile.content || activeFile.content.trim() === '';
+      if (isEmpty) {
+        updateFileContent(activeFile.id, defaultCode);
+      }
+    }
+  }, [selectedLanguage]);
 
   // Load history item
   const handleLoadHistory = (item: HistoryItem) => {
@@ -325,7 +343,7 @@ function PlaygroundContent() {
               onAddFile={handleAddFile}
             />
 
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <CodeEditor
                 value={activeFile?.content || ''}
                 onChange={handleContentChange}
@@ -346,7 +364,7 @@ function PlaygroundContent() {
             <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
               <h2 className="text-sm font-medium text-gray-300">Output</h2>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <OutputPanel
                 output={output}
                 loading={executing}
