@@ -332,8 +332,6 @@ make run-dev
 
 ## 📄 Documentation
 
-- `TODOLIST.md` - Detailed task list (1500+ lines)
-- `PRIORITY_ROADMAP.md` - Priority roadmap (all phases complete)
 - `docs/CSP_IMPLEMENTATION.md` - CSP implementation guide
 - `docs/MONACO_IMPROVEMENTS.md` - Monaco Editor improvements
 - `tests/e2e/README.md` - E2E testing guide
