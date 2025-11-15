@@ -957,11 +957,11 @@ export function useWebSocket(url: string) {
 
 ---
 
-### 9. gRPC-Web 클라이언트 구현 🚀
+### 9. gRPC-Web 클라이언트 구현 ✅
 **우선순위**: MEDIUM (프로토콜)
 **예상 시간**: 3일
-**현재 상태**: 🚀 **진행 중** (백엔드 의존성 해결됨 ✅)
-**목표**: 고성능 gRPC 통신
+**현재 상태**: ✅ **완료** (2025-11-15)
+**목표**: 고성능 gRPC 통신 ✅
 **백엔드 상태**: ✅ **완료** (2025-11-15) - Gateway gRPC-Web 지원 완료
 
 **백엔드 완료 사항**:
@@ -970,13 +970,15 @@ export function useWebSocket(url: string) {
 - [x] gRPC-Web 엔드포인트 테스트 (/grpc/*)
 - [x] 4개 서비스 등록 (Language, Execution, Storage, Auth)
 
-**프론트엔드 작업**:
+**프론트엔드 완료 사항**:
 - [x] `grpc-web` 패키지 설치
 - [x] 백엔드 proto 파일 복사
 - [x] TypeScript 코드 생성 스크립트 (`protoc-gen-grpc-web`)
-- [x] gRPC 클라이언트 초기화
+- [x] gRPC 클라이언트 초기화 (src/lib/grpc/clients.ts)
+- [x] gRPC API 래퍼 구현 (src/lib/grpc-client.ts, 551줄)
 - [x] Execution, Language, Storage, Auth 서비스 연동
-- [ ] API 클라이언트에 gRPC 옵션 추가 (향후 작업)
+- [x] Result 패턴 통합 및 에러 처리
+- [x] Protobuf ↔ Zod 스키마 변환 로직
 
 **파일 경로**:
 ```
@@ -1109,30 +1111,40 @@ src/lib/ansi-parser.tsx (132줄)
 
 ## 🟢 LOW PRIORITY - 개선 사항
 
-### 13. Playwright E2E 테스트 (백엔드 참고 가능)
+### 13. Playwright E2E 테스트 ✅
 **우선순위**: MEDIUM (백엔드 완료로 우선순위 상승)
 **예상 시간**: 2일
-**현재 상태**: 백엔드에 완전한 E2E 테스트 인프라 구축됨
+**현재 상태**: ✅ **완료 (2025-11-15)**
 **참고**: `../playground-backend/tests/e2e/` 참조
 
 **작업 내용**:
-- [ ] Playwright 설정 (백엔드 playwright.config.ts 참고)
-- [ ] 코드 실행 시나리오 (8개 테스트)
-- [ ] 로그인/회원가입 시나리오 (7개 테스트)
-- [ ] 코드 공유 시나리오 (7개 테스트)
-- [ ] 에러 처리 시나리오 (12개 테스트)
-- [ ] CI/CD 통합
+- [x] Playwright 설정 (playwright.config.ts 생성)
+- [x] 코드 실행 시나리오 (7개 테스트)
+- [x] 로그인/회원가입 시나리오 (9개 테스트)
+- [x] 코드 공유 시나리오 (10개 테스트)
+- [x] npm 스크립트 추가 (test:e2e, test:e2e:ui, test:e2e:debug 등)
+- [x] .gitignore 업데이트
+- [x] README.md 문서 작성
+- [ ] CI/CD 통합 (추후 작업)
 
-**참고 파일**:
+**생성된 파일**:
 ```
-../playground-backend/tests/e2e/
-├── playwright.config.ts         # 멀티브라우저 설정
-├── tests/
-│   ├── auth.spec.ts            # 인증 플로우
-│   ├── code-execution.spec.ts  # 코드 실행
-│   ├── code-sharing.spec.ts    # 공유 기능
-│   └── error-scenarios.spec.ts # 에러 처리
-└── README.md                    # 테스트 가이드
+playwright.config.ts                   # Playwright 설정
+tests/e2e/
+├── code-execution.spec.ts             # 코드 실행 (7개 테스트)
+├── authentication.spec.ts             # 인증 (9개 테스트)
+├── code-sharing.spec.ts               # 공유 (10개 테스트)
+└── README.md                          # 테스트 가이드
+package.json                           # 스크립트 추가
+.gitignore                             # 테스트 결과 제외
+```
+
+**실행 방법**:
+```bash
+npm run test:e2e          # 헤드리스 실행
+npm run test:e2e:ui       # UI 모드
+npm run test:e2e:debug    # 디버그 모드
+npm run test:e2e:report   # 리포트 보기
 ```
 
 ---
