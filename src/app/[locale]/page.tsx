@@ -117,22 +117,23 @@ function PlaygroundContent() {
   // Combined error
   const error = languageError || executionError || shareError || settingsError;
 
-  // Set initial code when language loads
+  // Set initial code when language loads or changes
   useEffect(() => {
-    if (defaultCode && activeFile && !activeFile.content) {
-      updateFileContent(activeFile.id, defaultCode);
-    }
-  }, [defaultCode, activeFile?.id]);
+    console.log('🔍 Editor Debug:', {
+      hasDefaultCode: !!defaultCode,
+      hasActiveFile: !!activeFile,
+      activeFileContent: activeFile?.content?.substring(0, 50),
+      selectedLanguage,
+    });
 
-  // Update code when language changes
-  useEffect(() => {
     if (defaultCode && activeFile) {
       const isEmpty = !activeFile.content || activeFile.content.trim() === '';
+      console.log('📝 Setting code:', { isEmpty, defaultCodeLength: defaultCode.length });
       if (isEmpty) {
         updateFileContent(activeFile.id, defaultCode);
       }
     }
-  }, [selectedLanguage]);
+  }, [defaultCode, activeFile?.id, selectedLanguage, updateFileContent]);
 
   // Load history item
   const handleLoadHistory = (item: HistoryItem) => {
@@ -348,6 +349,7 @@ function PlaygroundContent() {
                 value={activeFile?.content || ''}
                 onChange={handleContentChange}
                 language={selectedLanguage}
+                readOnly={false}
                 fontSize={editorSettings.font_size}
                 fontFamily={editorSettings.font_family}
                 tabSize={editorSettings.tab_size}
