@@ -9,6 +9,8 @@ import SettingsModal from '@/components/SettingsModal';
 import AuthModal from '@/components/AuthModal';
 import { ShortcutsHelp } from '@/components/ShortcutsHelp';
 import HistorySidebar from '@/components/HistorySidebar';
+import FileTabs from '@/components/FileTabs';
+import FileTree from '@/components/FileTree';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
@@ -16,7 +18,9 @@ import { useShare } from '@/hooks/useShare';
 import { useSettings } from '@/hooks/useSettings';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useHistory } from '@/hooks/useHistory';
+import { useFiles } from '@/hooks/useFiles';
 import { HistoryItem } from '@/lib/history';
+import { useToast } from '@/hooks/useToast';
 
 // Force dynamic rendering for URL search params
 export const dynamic = 'force-dynamic';
@@ -24,19 +28,31 @@ export const dynamic = 'force-dynamic';
 function PlaygroundContent() {
   const searchParams = useSearchParams();
   const { user, isAuthenticated, logout } = useAuth();
+  const toast = useToast();
 
   // Custom hooks
   const {
     languages,
     selectedLanguage,
-    code,
     loading: loadingLanguages,
     error: languageError,
-    setCode,
     setSelectedLanguage,
     changeLanguage,
-    loadTemplate,
   } = useLanguages();
+
+  // Multi-file support
+  const {
+    files,
+    activeFileId,
+    activeFile,
+    addFile,
+    deleteFile,
+    renameFile,
+    updateFileContent,
+    setActiveFile,
+    getFilesObject,
+    loadFiles,
+  } = useFiles('main.ks', '');
 
   const {
     output,
@@ -71,6 +87,7 @@ function PlaygroundContent() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showFileTree, setShowFileTree] = useState(false);
 
   // History hook
   const history = useHistory();
@@ -80,8 +97,31 @@ function PlaygroundContent() {
 
   // Load history item
   const handleLoadHistory = (item: HistoryItem) => {
-    setCode(item.code);
+    // For now, load as a single file (history doesn't support multi-file yet)
+    if (activeFile) {
+      updateFileContent(activeFile.id, item.code);
+    }
     setSelectedLanguage(item.language);
+  };
+
+  // Handle adding new file
+  const handleAddFile = () => {
+    const fileNumber = files.length + 1;
+    const newFileName = `file${fileNumber}.ks`;
+    addFile(newFileName, '');
+    toast.success(`Created ${newFileName}`);
+  };
+
+  // Handle content change in editor
+  const handleContentChange = (newContent: string) => {
+    if (activeFile) {
+      updateFileContent(activeFile.id, newContent);
+    }
+  };
+
+  // Get current code (for execution and sharing)
+  const getCurrentCode = (): string => {
+    return activeFile?.content || '';
   };
 
   // Save to history when execution completes
@@ -89,7 +129,7 @@ function PlaygroundContent() {
     if (output && !executing && !streaming) {
       history.addItem({
         language: selectedLanguage,
-        code,
+        code: getCurrentCode(),
         output,
         success: output.success,
       });
@@ -97,12 +137,12 @@ function PlaygroundContent() {
   }, [output, executing, streaming]);
 
   // Keyboard shortcuts
-  useKeyboardShortcut('Enter', () => execute(code, selectedLanguage, languages), {
+  useKeyboardShortcut('Enter', () => execute(getCurrentCode(), selectedLanguage, languages), {
     ctrl: true,
     enabled: !executing && !streaming,
   });
 
-  useKeyboardShortcut('Enter', () => executeStream(code, selectedLanguage, languages), {
+  useKeyboardShortcut('Enter', () => executeStream(getCurrentCode(), selectedLanguage, languages), {
     ctrl: true,
     shift: true,
     enabled: !executing && !streaming,
@@ -128,7 +168,10 @@ function PlaygroundContent() {
     if (shareId) {
       loadShared(shareId, (language, sharedCode) => {
         setSelectedLanguage(language);
-        setCode(sharedCode);
+        // Load shared code into active file
+        if (activeFile) {
+          updateFileContent(activeFile.id, sharedCode);
+        }
         resetExecution();
       });
     }
@@ -162,13 +205,13 @@ function PlaygroundContent() {
               onSelect={changeLanguage}
             />
             <button
-              onClick={loadTemplate}
+              onClick={() => setShowFileTree(prev => !prev)}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
             >
-              Load Template
+              📁 Files
             </button>
             <button
-              onClick={() => createShare(code, selectedLanguage, languages)}
+              onClick={() => createShare(getCurrentCode(), selectedLanguage, languages)}
               disabled={sharing}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
             >
@@ -210,14 +253,14 @@ function PlaygroundContent() {
             )}
 
             <button
-              onClick={() => execute(code, selectedLanguage, languages)}
+              onClick={() => execute(getCurrentCode(), selectedLanguage, languages)}
               disabled={executing || streaming}
               className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
             >
               {executing ? 'Running...' : '▶ Run'}
             </button>
             <button
-              onClick={() => executeStream(code, selectedLanguage, languages)}
+              onClick={() => executeStream(getCurrentCode(), selectedLanguage, languages)}
               disabled={executing || streaming}
               className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
             >
@@ -229,16 +272,37 @@ function PlaygroundContent() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
+        {/* File Tree Sidebar */}
+        {showFileTree && (
+          <FileTree
+            isOpen={showFileTree}
+            onClose={() => setShowFileTree(false)}
+            files={files}
+            activeFileId={activeFileId}
+            onSelectFile={setActiveFile}
+            onAddFile={handleAddFile}
+            onRenameFile={renameFile}
+            onDeleteFile={deleteFile}
+          />
+        )}
+
         {/* Editor Panel */}
         <div className="w-1/2 border-r border-gray-800">
           <div className="h-full flex flex-col">
-            <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
-              <h2 className="text-sm font-medium text-gray-300">Code Editor</h2>
-            </div>
+            {/* File Tabs */}
+            <FileTabs
+              files={files}
+              activeFileId={activeFileId}
+              onSelectFile={setActiveFile}
+              onCloseFile={deleteFile}
+              onRenameFile={renameFile}
+              onAddFile={handleAddFile}
+            />
+
             <div className="flex-1">
               <CodeEditor
-                value={code}
-                onChange={setCode}
+                value={activeFile?.content || ''}
+                onChange={handleContentChange}
                 language={selectedLanguage}
                 fontSize={editorSettings.font_size}
                 fontFamily={editorSettings.font_family}
