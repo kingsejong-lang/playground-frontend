@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { ZodSchema } from 'zod';
+import { ZodSchema, z } from 'zod';
 import { Result } from './types/result';
 import {
   ApiError,
@@ -17,20 +17,62 @@ import * as schemas from './schemas';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 /**
- * Fetches CSRF token from backend
+ * CSRF token cache with expiration
  */
-async function getCsrfToken(): Promise<string> {
-  try {
-    const response = await fetch(`${API_URL}/api/v1/csrf/token`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSRF token: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data.csrf_token;
-  } catch (error) {
-    console.error('Failed to fetch CSRF token:', error);
-    throw error;
+let csrfTokenCache: { token: string; expiresAt: number } | null = null;
+const CSRF_TOKEN_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetches CSRF token from backend with caching and retry logic
+ */
+async function getCsrfToken(retries = 3): Promise<string> {
+  // Check cache first
+  if (csrfTokenCache && csrfTokenCache.expiresAt > Date.now()) {
+    return csrfTokenCache.token;
   }
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/csrf/token`, {
+        credentials: 'include', // Include cookies
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const token = data.csrf_token;
+
+      // Cache the token
+      csrfTokenCache = {
+        token,
+        expiresAt: Date.now() + CSRF_TOKEN_CACHE_DURATION,
+      };
+
+      return token;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`CSRF token fetch attempt ${attempt + 1} failed:`, error);
+
+      // Wait before retry (exponential backoff)
+      if (attempt < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+      }
+    }
+  }
+
+  // All retries failed
+  throw lastError || new Error('Failed to fetch CSRF token after retries');
+}
+
+/**
+ * Clears the CSRF token cache (useful after logout or token invalidation)
+ */
+function clearCsrfTokenCache(): void {
+  csrfTokenCache = null;
 }
 
 /**
@@ -67,6 +109,51 @@ function createAxiosInstance(): AxiosInstance {
       return config;
     },
     (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // Response interceptor to handle 401/403 errors
+  instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+
+      // Handle 403 CSRF errors (retry once with new token)
+      if (error.response?.status === 403 && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        // Clear CSRF cache and retry
+        clearCsrfTokenCache();
+
+        try {
+          const csrfToken = await getCsrfToken();
+          originalRequest.headers['X-CSRF-Token'] = csrfToken;
+          return instance(originalRequest);
+        } catch (csrfError) {
+          console.error('Failed to retry request with new CSRF token:', csrfError);
+          return Promise.reject(error);
+        }
+      }
+
+      // Handle 401 Unauthorized (token expired)
+      if (error.response?.status === 401 && !originalRequest._retryAuth) {
+        originalRequest._retryAuth = true;
+
+        try {
+          // Try to refresh token
+          const refreshResult = await authAPI.refresh({});
+          if (refreshResult.ok) {
+            // Retry original request
+            return instance(originalRequest);
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Redirect to login or clear user state
+          // This should be handled by the app
+        }
+      }
+
       return Promise.reject(error);
     }
   );
@@ -394,6 +481,25 @@ export const authAPI = {
    */
   getMe: async (): Promise<Result<schemas.User, ApiError>> => {
     return safeApiCall('GET', '/auth/me', null, schemas.GetMeResponseSchema);
+  },
+
+  /**
+   * Logs out the current user and clears httpOnly cookies.
+   *
+   * @returns Result containing logout confirmation or an error
+   */
+  logout: async (): Promise<Result<{ success: boolean }, ApiError>> => {
+    const LogoutResponseSchema = z.object({
+      success: z.boolean(),
+    });
+    const result = await safeApiCall('POST', '/auth/logout', null, LogoutResponseSchema);
+
+    // Clear CSRF token cache on logout
+    if (result.ok) {
+      clearCsrfTokenCache();
+    }
+
+    return result;
   },
 };
 

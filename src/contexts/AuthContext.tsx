@@ -9,7 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,11 +73,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    // Cookies are cleared by the backend on logout endpoint call
-    // For now, just clear the user state
-    // TODO: Call backend logout endpoint to clear httpOnly cookies
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Call backend to clear httpOnly cookies
+      await authAPI.logout();
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+      // Continue with logout even if API call fails
+    } finally {
+      // Always clear user state
+      setUser(null);
+    }
   };
 
   return (
