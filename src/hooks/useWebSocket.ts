@@ -133,10 +133,12 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
   /**
    * Execute code via WebSocket
+   * @returns requestId on success, empty string on failure
    */
   const execute = useCallback(async (request: ExecuteRequest): Promise<string> => {
     if (!clientRef.current?.isConnected()) {
-      throw new Error('WebSocket not connected');
+      console.error('[WebSocket Hook] Cannot execute, not connected');
+      return '';
     }
 
     // Generate unique request ID
@@ -149,7 +151,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       return requestId;
     } catch (error) {
       console.error('[WebSocket Hook] Execute failed:', error);
-      throw error;
+      return '';
     }
   }, []);
 

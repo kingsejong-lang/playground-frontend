@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { shareAPI, Language } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from './useToast';
+import { extractErrorMessage } from '@/lib/guards';
 
 interface UseShareReturn {
   shareUrl: string | null;
@@ -42,7 +43,9 @@ export function useShare(): UseShareReturn {
     try {
       const lang = languages.find(l => l.id === language);
       if (!lang) {
-        throw new Error('Language not found');
+        setError('Language not found');
+        setSharing(false);
+        return;
       }
 
       const extension = lang.extensions[0] || '.txt';
@@ -62,9 +65,9 @@ export function useShare(): UseShareReturn {
 
       // Copy to clipboard
       await navigator.clipboard.writeText(url);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Share failed:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to create share');
+      setError(extractErrorMessage(err));
     } finally {
       setSharing(false);
     }

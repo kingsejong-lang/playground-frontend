@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { executionAPI, ExecuteResponse, Language } from '@/lib/api';
+import { extractErrorMessage } from '@/lib/guards';
 
 interface ExecutionEvent {
   type: string;
@@ -47,7 +48,9 @@ export function useCodeExecution(): UseCodeExecutionReturn {
     try {
       const lang = languages.find(l => l.id === language);
       if (!lang) {
-        throw new Error('Language not found');
+        setError('Language not found');
+        setLoading(false);
+        return;
       }
 
       // Determine filename based on language
@@ -62,9 +65,9 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       });
 
       setOutput(result);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Execution failed:', err);
-      setError(err.response?.data?.message || err.message || 'Execution failed');
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,9 @@ export function useCodeExecution(): UseCodeExecutionReturn {
     try {
       const lang = languages.find(l => l.id === language);
       if (!lang) {
-        throw new Error('Language not found');
+        setError('Language not found');
+        setStreaming(false);
+        return;
       }
 
       const extension = lang.extensions[0] || '.txt';
@@ -109,14 +114,18 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       });
 
       if (!response.ok) {
-        throw new Error('Stream failed to start');
+        setError('Stream failed to start');
+        setStreaming(false);
+        return;
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error('No reader available');
+        setError('No reader available');
+        setStreaming(false);
+        return;
       }
 
       while (true) {
@@ -137,9 +146,9 @@ export function useCodeExecution(): UseCodeExecutionReturn {
           }
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Stream execution failed:', err);
-      setError(err.message || 'Stream execution failed');
+      setError(extractErrorMessage(err));
     } finally {
       setStreaming(false);
     }

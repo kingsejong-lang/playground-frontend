@@ -4,6 +4,7 @@
  */
 
 import { ExecuteResponse } from './api';
+import { isArray } from './guards';
 
 /**
  * History item interface
@@ -43,9 +44,16 @@ export function getHistoryItems(): HistoryItem[] {
       return [];
     }
 
-    const items = JSON.parse(stored) as HistoryItem[];
+    const parsed = JSON.parse(stored);
+
+    // Validate that parsed data is an array
+    if (!isArray<HistoryItem>(parsed)) {
+      console.error('Invalid history data: not an array');
+      return [];
+    }
+
     // Sort by timestamp descending (newest first)
-    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return parsed.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   } catch (error) {
     console.error('Failed to load history items:', error);
     return [];
@@ -188,12 +196,15 @@ export function exportHistoryToJson(): string {
  */
 export function importHistoryFromJson(jsonString: string): void {
   try {
-    const items = JSON.parse(jsonString) as HistoryItem[];
+    const parsed = JSON.parse(jsonString);
 
     // Validate items
-    if (!Array.isArray(items)) {
-      throw new Error('Invalid history data: not an array');
+    if (!isArray<HistoryItem>(parsed)) {
+      console.error('Invalid history data: not an array');
+      return;
     }
+
+    const items = parsed;
 
     // Merge with existing items and remove duplicates
     const existingItems = getHistoryItems();

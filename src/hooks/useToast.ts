@@ -9,7 +9,15 @@ export function useToast() {
   const context = useContext(ToastContext)
 
   if (!context) {
-    throw new Error('useToast must be used within ToastProvider')
+    console.error('useToast must be used within ToastProvider')
+    // Return a fallback context to prevent runtime errors
+    return {
+      showToast: () => {},
+      success: () => {},
+      error: () => {},
+      warning: () => {},
+      info: () => {},
+    }
   }
 
   return context

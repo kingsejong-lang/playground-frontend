@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { settingsAPI, EditorSettings, ThemeSettings } from '@/lib/api';
+import { extractErrorMessage } from '@/lib/guards';
 
 const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   font_size: 14,
@@ -78,9 +79,9 @@ export function useSettings(isAuthenticated: boolean): UseSettingsReturn {
         editor,
         theme,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to save settings:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to save settings');
+      setError(extractErrorMessage(err));
     }
   }, [isAuthenticated]);
 
