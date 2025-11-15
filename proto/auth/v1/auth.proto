@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package playground.auth.v1;
+
+option go_package = "github.com/kingsejong-lang/playground-backend/shared/proto/auth/v1;authv1";
+
+import "google/protobuf/timestamp.proto";
+
+// AuthService handles authentication and authorization
+service AuthService {
+  // Register creates a new user account
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Login authenticates a user and returns tokens
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // VerifyToken verifies a JWT token and returns claims
+  rpc VerifyToken(VerifyTokenRequest) returns (TokenClaims);
+
+  // RefreshToken refreshes an access token using a refresh token
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenPair);
+
+  // CreateAPIKey creates a new API key
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (APIKey);
+
+  // ValidateAPIKey validates an API key
+  rpc ValidateAPIKey(ValidateAPIKeyRequest) returns (APIKeyInfo);
+
+  // RevokeAPIKey revokes an API key
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (RevokeAPIKeyResponse);
+}
+
+// RegisterRequest represents a user registration request
+message RegisterRequest {
+  string email = 1;                       // Email address
+  string password = 2;                    // Password
+  string name = 3;                        // Display name
+}
+
+// RegisterResponse represents a user registration response
+message RegisterResponse {
+  TokenPair tokens = 1;                   // Access and refresh tokens
+  User user = 2;                          // Created user information
+}
+
+// LoginRequest represents a login request
+message LoginRequest {
+  oneof credential {
+    EmailPassword email_password = 1;     // Email/password login
+    string oauth_token = 2;               // OAuth token
+  }
+}
+
+// EmailPassword represents email/password credentials
+message EmailPassword {
+  string email = 1;                       // Email address
+  string password = 2;                    // Password
+}
+
+// LoginResponse represents a login response
+message LoginResponse {
+  TokenPair tokens = 1;                   // Access and refresh tokens
+  User user = 2;                          // User information
+}
+
+// TokenPair represents access and refresh tokens
+message TokenPair {
+  string access_token = 1;                // JWT access token
+  string refresh_token = 2;               // JWT refresh token
+  int64 expires_in = 3;                   // Access token expiration (seconds)
+}
+
+// User represents a user
+message User {
+  string id = 1;                          // User ID
+  string email = 2;                       // Email address
+  string name = 3;                        // Display name
+  repeated string roles = 4;              // User roles
+}
+
+// VerifyTokenRequest represents a token verification request
+message VerifyTokenRequest {
+  string token = 1;                       // JWT token to verify
+}
+
+// TokenClaims represents JWT token claims
+message TokenClaims {
+  string user_id = 1;                     // User ID
+  string email = 2;                       // Email address
+  repeated string roles = 3;              // User roles
+  google.protobuf.Timestamp issued_at = 4; // Token issue time
+  google.protobuf.Timestamp expires_at = 5; // Token expiration time
+}
+
+// RefreshTokenRequest represents a token refresh request
+message RefreshTokenRequest {
+  string refresh_token = 1;               // Refresh token
+}
+
+// CreateAPIKeyRequest represents a request to create an API key
+message CreateAPIKeyRequest {
+  string user_id = 1;                     // User ID
+  string name = 2;                        // API key name
+  repeated string scopes = 3;             // API key scopes/permissions
+  int32 expires_in_days = 4;              // Expiration in days (0 = never)
+}
+
+// APIKey represents an API key
+message APIKey {
+  string id = 1;                          // API key ID
+  string key = 2;                         // API key (only returned on creation)
+  string name = 3;                        // API key name
+  repeated string scopes = 4;             // API key scopes
+  google.protobuf.Timestamp created_at = 5; // Creation time
+  google.protobuf.Timestamp expires_at = 6; // Expiration time
+}
+
+// ValidateAPIKeyRequest represents a request to validate an API key
+message ValidateAPIKeyRequest {
+  string api_key = 1;                     // API key to validate
+}
+
+// APIKeyInfo represents validated API key information
+message APIKeyInfo {
+  string id = 1;                          // API key ID
+  string user_id = 2;                     // Owner user ID
+  string name = 3;                        // API key name
+  repeated string scopes = 4;             // API key scopes
+  bool valid = 5;                         // Whether the key is valid
+}
+
+// RevokeAPIKeyRequest represents a request to revoke an API key
+message RevokeAPIKeyRequest {
+  string api_key_id = 1;                  // API key ID to revoke
+  string user_id = 2;                     // User ID (for authorization)
+}
+
+// RevokeAPIKeyResponse represents a response for revoke operation
+message RevokeAPIKeyResponse {
+  bool revoked = 1;                       // Whether revocation succeeded
+  string message = 2;                     // Response message
+}

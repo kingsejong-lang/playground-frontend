@@ -957,26 +957,26 @@ export function useWebSocket(url: string) {
 
 ---
 
-### 9. gRPC-Web 클라이언트 구현 ⏸️
+### 9. gRPC-Web 클라이언트 구현 🚀
 **우선순위**: MEDIUM (프로토콜)
 **예상 시간**: 3일
-**현재 상태**: ⏸️ **백엔드 의존성 대기 중**
+**현재 상태**: 🚀 **진행 중** (백엔드 의존성 해결됨 ✅)
 **목표**: 고성능 gRPC 통신
-**차단 요인**: 백엔드 gRPC-Web 지원 필요 (Envoy 프록시 또는 grpcweb 패키지)
+**백엔드 상태**: ✅ **완료** (2025-11-15) - Gateway gRPC-Web 지원 완료
 
-**백엔드 선행 작업** (📍 `../playground-backend/TODOLIST.md` 참고):
-- [ ] Gateway에 gRPC-Web 핸들러 추가
-- [ ] Envoy 프록시 설정 또는 `improbable-eng/grpc-web` 통합
-- [ ] CORS 헤더 설정
-- [ ] gRPC-Web 엔드포인트 테스트
+**백엔드 완료 사항**:
+- [x] Gateway에 gRPC-Web 핸들러 추가 (`improbable-eng/grpc-web`)
+- [x] CORS 헤더 설정
+- [x] gRPC-Web 엔드포인트 테스트 (/grpc/*)
+- [x] 4개 서비스 등록 (Language, Execution, Storage, Auth)
 
-**프론트엔드 작업** (백엔드 완료 후):
-- [ ] `grpc-web` 패키지 설치
-- [ ] 백엔드 proto 파일 복사
-- [ ] TypeScript 코드 생성 스크립트 (`protoc-gen-grpc-web`)
-- [ ] gRPC 클라이언트 초기화
-- [ ] Execution, Language, Storage 서비스 연동
-- [ ] API 클라이언트에 gRPC 옵션 추가
+**프론트엔드 작업**:
+- [x] `grpc-web` 패키지 설치
+- [x] 백엔드 proto 파일 복사
+- [x] TypeScript 코드 생성 스크립트 (`protoc-gen-grpc-web`)
+- [x] gRPC 클라이언트 초기화
+- [x] Execution, Language, Storage, Auth 서비스 연동
+- [ ] API 클라이언트에 gRPC 옵션 추가 (향후 작업)
 
 **파일 경로**:
 ```

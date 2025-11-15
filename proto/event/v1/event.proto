@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package event.v1;
+
+option go_package = "github.com/kingsejong-lang/playground-backend/shared/proto/event/v1;eventv1";
+
+import "google/protobuf/timestamp.proto";
+
+// EventService handles real-time events and notifications
+service EventService {
+  // Publish an event to a channel
+  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
+
+  // Subscribe to events on a channel (server streaming)
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream Event);
+
+  // Get presence information (who's online)
+  rpc GetPresence(GetPresenceRequest) returns (GetPresenceResponse);
+
+  // Update user presence
+  rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse);
+}
+
+// Event types
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_CODE_SHARED = 1;          // Code was shared
+  EVENT_TYPE_CODE_EXECUTED = 2;        // Code execution completed
+  EVENT_TYPE_USER_JOINED = 3;          // User joined a room
+  EVENT_TYPE_USER_LEFT = 4;            // User left a room
+  EVENT_TYPE_USER_TYPING = 5;          // User is typing
+  EVENT_TYPE_CODE_CHANGED = 6;         // Code content changed (collaboration)
+  EVENT_TYPE_NOTIFICATION = 7;         // General notification
+}
+
+// Event message
+message Event {
+  string id = 1;                       // Event ID
+  EventType type = 2;                  // Event type
+  string channel = 3;                  // Channel/room ID
+  string user_id = 4;                  // User who triggered the event
+  string user_name = 5;                // User display name
+  string payload = 6;                  // JSON payload (flexible)
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// Publish event request
+message PublishEventRequest {
+  EventType type = 1;
+  string channel = 2;
+  string user_id = 3;
+  string user_name = 4;
+  string payload = 5;                  // JSON string
+}
+
+// Publish event response
+message PublishEventResponse {
+  string event_id = 1;
+  bool success = 2;
+}
+
+// Subscribe events request
+message SubscribeEventsRequest {
+  string channel = 1;                  // Channel to subscribe to
+  string user_id = 2;                  // Subscribing user
+}
+
+// Presence status
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_ONLINE = 1;
+  PRESENCE_STATUS_IDLE = 2;
+  PRESENCE_STATUS_OFFLINE = 3;
+}
+
+// User presence
+message UserPresence {
+  string user_id = 1;
+  string user_name = 2;
+  PresenceStatus status = 3;
+  google.protobuf.Timestamp last_seen = 4;
+  map<string, string> metadata = 5;   // Extra data (current file, etc)
+}
+
+// Get presence request
+message GetPresenceRequest {
+  string channel = 1;                  // Channel/room to check
+}
+
+// Get presence response
+message GetPresenceResponse {
+  repeated UserPresence users = 1;
+  int32 total_online = 2;
+}
+
+// Update presence request
+message UpdatePresenceRequest {
+  string channel = 1;
+  string user_id = 2;
+  string user_name = 3;
+  PresenceStatus status = 4;
+  map<string, string> metadata = 5;
+}
+
+// Update presence response
+message UpdatePresenceResponse {
+  bool success = 1;
+}
