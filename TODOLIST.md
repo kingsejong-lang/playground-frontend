@@ -60,13 +60,22 @@
 - 보안 기능 (httpOnly 쿠키) - **백엔드 구현 필요**
   - 📝 상세 요구사항: `BACKEND_SECURITY_REQUIREMENTS.md` 참조
 
+- **키보드 단축키** ✅ (이미 구현됨)
+  - useKeyboardShortcut 훅
+  - ShortcutsHelp 다이얼로그
+  - 플랫폼별 modifier key 지원 (Cmd/Ctrl)
+  - 8개 단축키 구현
+- **실행 히스토리** ✅ (이미 구현됨)
+  - useHistory 훅
+  - HistorySidebar 컴포넌트
+  - localStorage 기반 영구 저장
+  - 히스토리 아이템 로드 및 재실행
+
 ### ❌ 미완료 (프론트엔드 작업 가능)
-- 키보드 단축키
-- 실행 히스토리
-- Monaco Editor 고급 기능 (Kingsejong 문법, 자동완성)
-- PWA 지원
-- 다국어 지원 (i18n)
-- 접근성 개선 (a11y)
+- Monaco Editor 고급 기능 (Kingsejong 문법 하이라이팅, 자동완성)
+- PWA 지원 (Service Worker, Manifest, 오프라인 지원)
+- 다국어 지원 (i18n, 한글/영어)
+- 접근성 개선 (a11y, ARIA 레이블, 키보드 네비게이션)
 
 ### 🎯 백엔드 완료에 따른 다음 단계
 백엔드가 100% 완료됨에 따라 프론트엔드 개발에 집중할 수 있습니다:
