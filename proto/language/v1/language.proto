@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package playground.language.v1;
+
+option go_package = "github.com/kingsejong-lang/playground-backend/shared/proto/language/v1;languagev1";
+
+// LanguageService manages programming language metadata
+service LanguageService {
+  // ListLanguages returns a list of supported languages
+  rpc ListLanguages(ListLanguagesRequest) returns (ListLanguagesResponse);
+
+  // GetLanguage returns details about a specific language
+  rpc GetLanguage(GetLanguageRequest) returns (Language);
+
+  // GetLanguageTemplate returns a code template for a language
+  rpc GetLanguageTemplate(GetTemplateRequest) returns (Template);
+}
+
+// ListLanguagesRequest represents a request to list languages
+message ListLanguagesRequest {
+  // No parameters needed for now
+}
+
+// ListLanguagesResponse represents a response with language list
+message ListLanguagesResponse {
+  repeated Language languages = 1;        // List of languages
+}
+
+// GetLanguageRequest represents a request for language details
+message GetLanguageRequest {
+  string id = 1;                          // Language ID
+}
+
+// Language represents a programming language
+message Language {
+  string id = 1;                          // Unique ID (e.g., "kingsejong_v1_0")
+  string name = 2;                        // Display name
+  string version = 3;                     // Language version
+  repeated string extensions = 4;         // File extensions (e.g., [".ks"])
+  repeated string capabilities = 5;       // Capabilities (e.g., ["compile", "run"])
+
+  LanguageSpec spec = 10;                 // Language specification
+}
+
+// LanguageSpec represents language execution specification
+message LanguageSpec {
+  string docker_image = 1;                // Docker image to use
+  string compile_cmd = 2;                 // Compilation command
+  string run_cmd = 3;                     // Execution command
+  int32 default_timeout = 4;              // Default timeout in seconds
+  int64 default_memory_limit = 5;         // Default memory limit in bytes
+
+  repeated EnvVar env_vars = 10;          // Environment variables
+}
+
+// EnvVar represents an environment variable
+message EnvVar {
+  string key = 1;                         // Variable name
+  string value = 2;                       // Variable value
+}
+
+// GetTemplateRequest represents a request for code template
+message GetTemplateRequest {
+  string language_id = 1;                 // Language ID
+  string template_type = 2;               // Template type (e.g., "hello_world")
+}
+
+// Template represents a code template
+message Template {
+  string language_id = 1;                 // Language ID
+  string name = 2;                        // Template name
+  string description = 3;                 // Template description
+  map<string, string> files = 4;          // Template files (filename -> content)
+}

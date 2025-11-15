@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package playground.execution.v1;
+
+option go_package = "github.com/kingsejong-lang/playground-backend/shared/proto/execution/v1;executionv1";
+
+import "google/protobuf/timestamp.proto";
+
+// ExecutionService handles code compilation and execution
+service ExecutionService {
+  // Execute runs code synchronously and returns the result
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+
+  // ExecuteStream runs code and streams events in real-time
+  rpc ExecuteStream(ExecuteRequest) returns (stream ExecuteEvent);
+
+  // CancelExecution cancels a running execution
+  rpc CancelExecution(CancelRequest) returns (CancelResponse);
+
+  // GetExecutionStatus gets the status of an execution
+  rpc GetExecutionStatus(GetStatusRequest) returns (ExecutionStatus);
+}
+
+// ExecuteRequest represents a code execution request
+message ExecuteRequest {
+  string language = 1;                    // Language ID (e.g., "kingsejong_v1_0")
+  map<string, string> files = 2;          // Source files (filename -> content)
+  string args = 3;                        // Command-line arguments
+  string stdin = 4;                       // Standard input
+  int32 timeout_seconds = 5;              // Timeout in seconds (default: 30)
+
+  // Metadata
+  string request_id = 10;                 // Unique request ID
+  string user_id = 11;                    // User ID (optional)
+}
+
+// ExecuteResponse represents the result of code execution
+message ExecuteResponse {
+  string request_id = 1;                  // Request ID
+  bool success = 2;                       // Whether execution succeeded
+  repeated Event events = 3;              // Output events
+  Metrics metrics = 4;                    // Execution metrics
+  Error error = 5;                        // Error details (if failed)
+}
+
+// ExecuteEvent represents a streaming event during execution
+message ExecuteEvent {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_STARTED = 1;                     // Execution started
+    TYPE_COMPILING = 2;                   // Compilation started
+    TYPE_COMPILED = 3;                    // Compilation completed
+    TYPE_RUNNING = 4;                     // Execution running
+    TYPE_OUTPUT = 5;                      // Output received
+    TYPE_COMPLETED = 6;                   // Execution completed
+    TYPE_FAILED = 7;                      // Execution failed
+  }
+
+  Type type = 1;                          // Event type
+  string message = 2;                     // Human-readable message
+  bytes data = 3;                         // Binary data (optional)
+  google.protobuf.Timestamp timestamp = 4; // Event timestamp
+}
+
+// Event represents an output event
+message Event {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_STDOUT = 1;                      // Standard output
+    KIND_STDERR = 2;                      // Standard error
+    KIND_COMPILE = 3;                     // Compilation message
+    KIND_SYSTEM = 4;                      // System message
+  }
+
+  Kind kind = 1;                          // Event kind
+  string message = 2;                     // Event message
+  google.protobuf.Timestamp timestamp = 3; // Event timestamp
+}
+
+// Metrics represents execution metrics
+message Metrics {
+  int64 compile_time_ms = 1;              // Compilation time in milliseconds
+  int64 run_time_ms = 2;                  // Execution time in milliseconds
+  int64 memory_bytes = 3;                 // Memory used in bytes
+  double cpu_percent = 4;                 // CPU usage percentage
+}
+
+// Error represents an error
+message Error {
+  string code = 1;                        // Error code
+  string message = 2;                     // Error message
+  string details = 3;                     // Error details
+}
+
+// CancelRequest represents a cancellation request
+message CancelRequest {
+  string request_id = 1;                  // Request ID to cancel
+}
+
+// CancelResponse represents a cancellation response
+message CancelResponse {
+  bool cancelled = 1;                     // Whether cancellation succeeded
+  string message = 2;                     // Response message
+}
+
+// GetStatusRequest represents a status request
+message GetStatusRequest {
+  string request_id = 1;                  // Request ID
+}
+
+// ExecutionStatus represents the status of an execution
+message ExecutionStatus {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_PENDING = 1;                   // Waiting to start
+    STATUS_COMPILING = 2;                 // Compiling
+    STATUS_RUNNING = 3;                   // Running
+    STATUS_COMPLETED = 4;                 // Completed successfully
+    STATUS_FAILED = 5;                    // Failed
+    STATUS_CANCELLED = 6;                 // Cancelled
+    STATUS_TIMEOUT = 7;                   // Timed out
+  }
+
+  string request_id = 1;                  // Request ID
+  Status status = 2;                      // Current status
+  int32 progress = 3;                     // Progress percentage (0-100)
+  google.protobuf.Timestamp started_at = 4; // Start time
+  google.protobuf.Timestamp completed_at = 5; // Completion time
+}
