@@ -1,6 +1,8 @@
 'use client';
 
-import { Editor } from '@monaco-editor/react';
+import { Editor, OnMount } from '@monaco-editor/react';
+import { useRef } from 'react';
+import { registerKingsejongLanguage, kingsejongLanguageId } from '@/lib/monaco/kingsejong-language';
 
 interface CodeEditorProps {
   value: string;
@@ -25,11 +27,25 @@ export default function CodeEditor({
   minimap = true,
   theme = 'vs-dark',
 }: CodeEditorProps) {
+  const isKingsejongRegistered = useRef(false);
+
   const getMonacoLanguage = (lang: string): string => {
     if (lang.startsWith('python')) return 'python';
     if (lang.startsWith('go')) return 'go';
-    if (lang.startsWith('kingsejong')) return 'plaintext'; // Monaco doesn't support Kingsejong yet
+    if (lang.startsWith('kingsejong')) return kingsejongLanguageId;
     return 'plaintext';
+  };
+
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    // Register Kingsejong language once
+    if (!isKingsejongRegistered.current) {
+      try {
+        registerKingsejongLanguage(monaco);
+        isKingsejongRegistered.current = true;
+      } catch (error) {
+        console.error('Failed to register Kingsejong language:', error);
+      }
+    }
   };
 
   return (
@@ -39,6 +55,7 @@ export default function CodeEditor({
       value={value}
       onChange={(value) => onChange(value || '')}
       theme={theme}
+      onMount={handleEditorDidMount}
       options={{
         readOnly,
         minimap: { enabled: minimap },
@@ -48,6 +65,9 @@ export default function CodeEditor({
         lineNumbers: 'on',
         scrollBeyondLastLine: false,
         automaticLayout: true,
+        suggestOnTriggerCharacters: true,
+        quickSuggestions: true,
+        wordBasedSuggestions: 'off',
       }}
     />
   );
