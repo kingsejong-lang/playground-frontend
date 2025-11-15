@@ -10,9 +10,30 @@ const withNextIntl = require('next-intl/plugin')(
   './src/i18n.ts'
 );
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Performance optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+
+  // Image optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
+  },
+
+  // Experimental features for better performance
+  experimental: {
+    optimizePackageImports: ['@monaco-editor/react'],
+  },
+
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
   },
@@ -85,4 +106,4 @@ const nextConfig = {
   },
 }
 
-module.exports = withPWA(withNextIntl(nextConfig))
+module.exports = withBundleAnalyzer(withPWA(withNextIntl(nextConfig)))

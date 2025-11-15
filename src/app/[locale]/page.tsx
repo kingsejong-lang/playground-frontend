@@ -3,16 +3,30 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import CodeEditor from '@/components/CodeEditor';
+import dynamicImport from 'next/dynamic';
 import LanguageToggle from '@/components/LanguageToggle';
 import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
-import SettingsModal from '@/components/SettingsModal';
-import AuthModal from '@/components/AuthModal';
-import { ShortcutsHelp } from '@/components/ShortcutsHelp';
-import HistorySidebar from '@/components/HistorySidebar';
 import FileTabs from '@/components/FileTabs';
-import FileTree from '@/components/FileTree';
+
+// Dynamic imports for heavy components
+const CodeEditor = dynamicImport(() => import('@/components/CodeEditor'), {
+  loading: () => (
+    <div className="h-full flex items-center justify-center bg-gray-900">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading editor...</p>
+      </div>
+    </div>
+  ),
+  ssr: false,
+});
+
+const SettingsModal = dynamicImport(() => import('@/components/SettingsModal'));
+const AuthModal = dynamicImport(() => import('@/components/AuthModal'));
+const HistorySidebar = dynamicImport(() => import('@/components/HistorySidebar'));
+const FileTree = dynamicImport(() => import('@/components/FileTree'));
+const ShortcutsHelp = dynamicImport(() => import('@/components/ShortcutsHelp').then(mod => ({ default: mod.ShortcutsHelp })));
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
