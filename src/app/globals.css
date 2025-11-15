@@ -26,3 +26,28 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Enhanced focus indicators for accessibility */
+@layer base {
+  /* Visible focus ring for keyboard navigation */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-950;
+  }
+
+  /* Special focus styles for buttons */
+  button:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-950;
+  }
+
+  /* Special focus styles for inputs and selects */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-1 ring-offset-gray-900;
+  }
+
+  /* Focus styles for links */
+  a:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-950;
+  }
+}

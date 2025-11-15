@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
@@ -55,16 +55,37 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     setError('');
   };
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-labelledby="auth-modal-title"
+      aria-modal="true"
+    >
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 id="auth-modal-title" className="text-2xl font-bold text-white">
             {mode === 'login' ? 'Login' : 'Sign Up'}
           </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
+            aria-label="Close authentication modal"
           >
             ✕
           </button>
@@ -120,7 +141,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           </div>
 
           {error && (
-            <div className="bg-red-900/20 border border-red-500 rounded-lg p-3">
+            <div className="bg-red-900/20 border border-red-500 rounded-lg p-3" role="alert">
               <p className="text-red-300 text-sm">{error}</p>
             </div>
           )}
@@ -129,6 +150,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
             type="submit"
             disabled={loading}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors font-medium"
+            aria-busy={loading}
           >
             {loading ? 'Processing...' : mode === 'login' ? 'Login' : 'Sign Up'}
           </button>
@@ -138,6 +160,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           <button
             onClick={toggleMode}
             className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            aria-label={mode === 'login' ? "Switch to sign up form" : "Switch to login form"}
           >
             {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Login'}
           </button>

@@ -95,6 +95,9 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       onClick={onClose}
+      role="dialog"
+      aria-labelledby="shortcuts-title"
+      aria-modal="true"
     >
       <div
         className="bg-gray-800 rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
@@ -102,7 +105,7 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 className="text-2xl font-bold text-white">Keyboard Shortcuts</h2>
+          <h2 id="shortcuts-title" className="text-2xl font-bold text-white">Keyboard Shortcuts</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"

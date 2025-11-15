@@ -41,6 +41,21 @@ export default function SettingsModal({
     if (initialTheme) setThemeSettings(initialTheme);
   }, [initialEditor, initialTheme]);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSave = () => {
@@ -54,13 +69,19 @@ export default function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-labelledby="settings-modal-title"
+      aria-modal="true"
+    >
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Settings</h2>
+          <h2 id="settings-modal-title" className="text-xl font-bold text-white">Settings</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
+            aria-label="Close settings modal"
           >
             ✕
           </button>
@@ -127,11 +148,15 @@ export default function SettingsModal({
 
             {/* Auto Save */}
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-300">Auto Save</label>
+              <label htmlFor="auto-save-toggle" className="text-sm font-medium text-gray-300">Auto Save</label>
               <button
+                id="auto-save-toggle"
                 onClick={() =>
                   setEditorSettings({ ...editorSettings, auto_save: !editorSettings.auto_save })
                 }
+                role="switch"
+                aria-checked={editorSettings.auto_save}
+                aria-label="Toggle auto save"
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   editorSettings.auto_save ? 'bg-blue-600' : 'bg-gray-700'
                 }`}
@@ -146,11 +171,15 @@ export default function SettingsModal({
 
             {/* Minimap */}
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-300">Show Minimap</label>
+              <label htmlFor="minimap-toggle" className="text-sm font-medium text-gray-300">Show Minimap</label>
               <button
+                id="minimap-toggle"
                 onClick={() =>
                   setEditorSettings({ ...editorSettings, minimap: !editorSettings.minimap })
                 }
+                role="switch"
+                aria-checked={editorSettings.minimap}
+                aria-label="Toggle minimap display"
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   editorSettings.minimap ? 'bg-blue-600' : 'bg-gray-700'
                 }`}
@@ -208,6 +237,7 @@ export default function SettingsModal({
           <button
             onClick={handleReset}
             className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+            aria-label="Reset all settings to default values"
           >
             Reset to Default
           </button>
@@ -215,12 +245,14 @@ export default function SettingsModal({
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+            aria-label="Cancel and close settings"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            aria-label="Save settings and close"
           >
             Save Settings
           </button>

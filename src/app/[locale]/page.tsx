@@ -198,6 +198,14 @@ function PlaygroundContent() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-950">
+      {/* Skip to main content link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg"
+      >
+        Skip to main content
+      </a>
+
       {/* Header */}
       <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -215,6 +223,7 @@ function PlaygroundContent() {
             <button
               onClick={() => setShowFileTree(prev => !prev)}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label={showFileTree ? "Close file tree" : "Open file tree"}
             >
               📁 Files
             </button>
@@ -222,18 +231,22 @@ function PlaygroundContent() {
               onClick={() => createShare(getCurrentCode(), selectedLanguage, languages)}
               disabled={sharing}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+              aria-label="Share code"
+              aria-busy={sharing}
             >
               {sharing ? 'Sharing...' : '🔗 Share'}
             </button>
             <button
               onClick={() => setShowSettings(true)}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label="Open settings"
             >
               ⚙️ Settings
             </button>
             <button
               onClick={() => setShowHistory(true)}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label="Open execution history"
             >
               📜 History
             </button>
@@ -247,6 +260,7 @@ function PlaygroundContent() {
                 <button
                   onClick={logout}
                   className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+                  aria-label="Logout from account"
                 >
                   Logout
                 </button>
@@ -255,6 +269,7 @@ function PlaygroundContent() {
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                aria-label="Open login modal"
               >
                 Login
               </button>
@@ -264,6 +279,8 @@ function PlaygroundContent() {
               onClick={() => execute(getCurrentCode(), selectedLanguage, languages)}
               disabled={executing || streaming}
               className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+              aria-label="Run code"
+              aria-busy={executing}
             >
               {executing ? 'Running...' : '▶ Run'}
             </button>
@@ -271,6 +288,8 @@ function PlaygroundContent() {
               onClick={() => executeStream(getCurrentCode(), selectedLanguage, languages)}
               disabled={executing || streaming}
               className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+              aria-label="Run code with streaming output"
+              aria-busy={streaming}
             >
               {streaming ? 'Streaming...' : '▶ Run (Stream)'}
             </button>
@@ -279,25 +298,27 @@ function PlaygroundContent() {
                 onClick={() => executeWebSocket(getCurrentCode(), selectedLanguage, languages)}
                 disabled={executing || streaming || !wsConnected}
                 className="px-6 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+                aria-label={wsConnected ? "Run code with WebSocket" : "WebSocket disconnected - cannot run"}
+                aria-busy={streaming && wsConnected}
               >
                 {streaming && wsConnected ? 'WS Running...' : '▶ Run (WebSocket)'}
               </button>
               {/* WebSocket status indicator */}
-              <div className="absolute -top-1 -right-1">
+              <div className="absolute -top-1 -right-1" aria-hidden="true">
                 {wsConnecting ? (
-                  <span className="flex h-3 w-3">
+                  <span className="flex h-3 w-3" title="WebSocket connecting">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
                   </span>
                 ) : wsReconnecting ? (
-                  <span className="flex h-3 w-3">
+                  <span className="flex h-3 w-3" title="WebSocket reconnecting">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
                   </span>
                 ) : wsConnected ? (
-                  <span className="inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  <span className="inline-flex rounded-full h-3 w-3 bg-green-500" title="WebSocket connected"></span>
                 ) : (
-                  <span className="inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  <span className="inline-flex rounded-full h-3 w-3 bg-red-500" title="WebSocket disconnected"></span>
                 )}
               </div>
             </div>
@@ -306,7 +327,7 @@ function PlaygroundContent() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div id="main-content" className="flex-1 flex overflow-hidden">
         {/* File Tree Sidebar */}
         {showFileTree && (
           <FileTree
@@ -371,9 +392,14 @@ function PlaygroundContent() {
 
       {/* Share URL Modal */}
       {shareUrl && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-labelledby="share-modal-title"
+          aria-modal="true"
+        >
           <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-white mb-4">Share Your Code</h3>
+            <h3 id="share-modal-title" className="text-lg font-bold text-white mb-4">Share Your Code</h3>
             <p className="text-sm text-gray-400 mb-4">
               Your code has been shared! The URL has been copied to clipboard.
             </p>
@@ -384,12 +410,14 @@ function PlaygroundContent() {
               <button
                 onClick={copyToClipboard}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                aria-label="Copy share URL to clipboard again"
               >
                 Copy Again
               </button>
               <button
                 onClick={closeShareModal}
                 className="flex-1 px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+                aria-label="Close share modal"
               >
                 Close
               </button>

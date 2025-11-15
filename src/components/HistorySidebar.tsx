@@ -160,6 +160,7 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm mb-3"
+            aria-label="Search history by code content"
           />
 
           {/* Filters */}
@@ -168,6 +169,7 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              aria-label="Filter history by programming language"
             >
               <option value="">All Languages</option>
               {languages.map((lang) => (
@@ -181,6 +183,7 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'success' | 'failed')}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              aria-label="Filter history by execution status"
             >
               <option value="all">All Status</option>
               <option value="success">Success Only</option>
@@ -193,18 +196,21 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
             <button
               onClick={handleExport}
               className="flex-1 px-3 py-2 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded hover:bg-gray-700 transition-colors"
+              aria-label="Export history to JSON file"
             >
               Export
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex-1 px-3 py-2 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded hover:bg-gray-700 transition-colors"
+              aria-label="Import history from JSON file"
             >
               Import
             </button>
             <button
               onClick={() => setShowConfirmClear(true)}
               className="flex-1 px-3 py-2 text-xs font-medium text-red-400 bg-red-900/20 border border-red-500 rounded hover:bg-red-900/30 transition-colors"
+              aria-label="Clear all history items"
             >
               Clear All
             </button>
@@ -216,6 +222,7 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
             accept=".json"
             onChange={handleImport}
             className="hidden"
+            aria-label="Select history JSON file to import"
           />
         </div>
 
@@ -275,22 +282,30 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
 
       {/* Confirm Clear Modal */}
       {showConfirmClear && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-labelledby="clear-confirm-title"
+          aria-describedby="clear-confirm-description"
+          aria-modal="true"
+        >
           <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-white mb-4">Clear All History?</h3>
-            <p className="text-sm text-gray-400 mb-6">
+            <h3 id="clear-confirm-title" className="text-lg font-bold text-white mb-4">Clear All History?</h3>
+            <p id="clear-confirm-description" className="text-sm text-gray-400 mb-6">
               This will permanently delete all {stats.total} history items. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmClear(false)}
                 className="flex-1 px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+                aria-label="Cancel clearing history"
               >
                 Cancel
               </button>
               <button
                 onClick={handleClearAll}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                aria-label="Confirm clearing all history items"
               >
                 Clear All
               </button>
