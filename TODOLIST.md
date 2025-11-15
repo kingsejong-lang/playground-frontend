@@ -679,19 +679,21 @@ describe('useCodeExecution', () => {
 
 ## 🟡 MEDIUM PRIORITY - 다음 단계 (기능 & UX)
 
-### 6. Toast 알림 시스템 구현
+### 6. Toast 알림 시스템 구현 ✅
 **우선순위**: MEDIUM (UX)
 **예상 시간**: 1일
-**현재 상태**: `alert()` 사용 중
-**목표**: 사용자 친화적인 알림 시스템
+**현재 상태**: ✅ **완료 (이미 구현됨)**
+**목표**: 사용자 친화적인 알림 시스템 ✅
 
 **작업 내용**:
-- [ ] Toast 컴포넌트 생성
-- [ ] Toast Context 생성
-- [ ] `useToast` 훅 생성
-- [ ] Success, Error, Warning, Info 타입
-- [ ] 자동 사라짐 (3-5초)
-- [ ] 스택형 여러 알림 지원
+- [x] Toast 컴포넌트 생성
+- [x] Toast Context 생성
+- [x] `useToast` 훅 생성
+- [x] Success, Error, Warning, Info 타입
+- [x] 자동 사라짐 (5초, 커스터마이징 가능)
+- [x] 스택형 여러 알림 지원
+- [x] slide-in-right 애니메이션
+- [x] 접근성 (ARIA labels)
 
 **파일 경로**:
 ```
@@ -1213,8 +1215,8 @@ src/lib/history.ts
 **시작일**: 2025-11-15
 
 **작업 목록**:
-- [ ] #6: Toast 시스템 (현재 작업 중)
-- [ ] #7: 키보드 단축키
+- [x] #6: Toast 시스템 ✅ (이미 구현됨)
+- [ ] #7: 키보드 단축키 (다음 작업)
 - [ ] #8: WebSocket
 - [ ] #10: 실행 히스토리
 - [ ] #11: 멀티 파일
