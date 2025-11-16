@@ -82,17 +82,22 @@ export default function SnippetLibrary({
       return;
     }
 
-    addSnippet({
-      title: newSnippet.title,
-      description: newSnippet.description,
-      code: newSnippet.code,
-      language: currentLanguage,
-      tags: newSnippet.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-      isFavorite: false,
-    });
+    try {
+      addSnippet({
+        title: newSnippet.title,
+        description: newSnippet.description,
+        code: newSnippet.code,
+        language: currentLanguage,
+        tags: newSnippet.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        isFavorite: false,
+      });
 
-    setNewSnippet({ title: '', description: '', code: '', tags: '' });
-    setShowAddForm(false);
+      setNewSnippet({ title: '', description: '', code: '', tags: '' });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to add snippet:', error);
+      alert(error instanceof Error ? error.message : 'Failed to add snippet');
+    }
   };
 
   return (

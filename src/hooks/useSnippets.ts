@@ -7,6 +7,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Snippet, SnippetFilter } from '@/lib/snippets/types';
+import {
+  sanitizeSnippetTitle,
+  sanitizeSnippetTags,
+  validateCodeSize,
+  escapeHTML,
+} from '@/lib/security/sanitize';
 
 const STORAGE_KEY = 'kingsejong-snippets';
 
@@ -78,8 +84,31 @@ export function useSnippets(): UseSnippetsReturn {
 
   // Add snippet
   const addSnippet = useCallback((snippet: Omit<Snippet, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Validate and sanitize inputs
+    const sanitizedTitle = sanitizeSnippetTitle(snippet.title);
+    const sanitizedDescription = sanitizeSnippetTitle(snippet.description); // Use same validation
+    const sanitizedTags = sanitizeSnippetTags(snippet.tags);
+
+    // Validate title
+    if (!sanitizedTitle || sanitizedTitle.length === 0) {
+      throw new Error('Snippet title is required');
+    }
+
+    // Validate code
+    if (!snippet.code || snippet.code.trim().length === 0) {
+      throw new Error('Snippet code is required');
+    }
+
+    // Validate code size (max 500KB)
+    if (!validateCodeSize(snippet.code, 500)) {
+      throw new Error('Snippet code is too large (max 500KB)');
+    }
+
     const newSnippet: Snippet = {
       ...snippet,
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      tags: sanitizedTags,
       id: generateId(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
