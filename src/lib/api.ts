@@ -25,10 +25,14 @@ export async function getCsrfToken(): Promise<string> {
     const response = await axios.get(`${API_URL}/api/v1/csrf/token`, {
       withCredentials: true,
     });
-    csrfToken = response.data.csrf_token;
+    const token = response.data.csrf_token;
+    if (!token) {
+      throw new Error('CSRF token not found in response');
+    }
+    csrfToken = token;
     // Cache for 5 minutes (same as backend)
     csrfExpiresAt = Date.now() + 5 * 60 * 1000;
-    return csrfToken;
+    return token;
   } catch (error) {
     console.error('Failed to get CSRF token:', error);
     throw error;

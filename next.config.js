@@ -18,6 +18,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
 
+  // Use SWC minifier for faster builds
+  swcMinify: true,
+
   // Performance optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
@@ -29,9 +32,23 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
   },
 
+  // Compression
+  compress: true,
+
   // Experimental features for better performance
   experimental: {
-    optimizePackageImports: ['@monaco-editor/react'],
+    optimizePackageImports: [
+      '@monaco-editor/react',
+      'react-resizable-panels',
+      '@testing-library/react',
+    ],
+  },
+
+  // Modularize imports for tree-shaking
+  modularizeImports: {
+    '@testing-library/react': {
+      transform: '@testing-library/react/{{member}}',
+    },
   },
 
   env: {
