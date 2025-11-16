@@ -1,14 +1,47 @@
 // Learn more: https://github.com/testing-library/jest-dom
-const { TextEncoder, TextDecoder } = require('util')
-global.TextEncoder = TextEncoder
-global.TextDecoder = TextDecoder
+import '@testing-library/jest-dom'
 
-require('whatwg-fetch')
-require('@testing-library/jest-dom')
+// Mock Next.js router
+jest.mock('next/navigation', () => ({
+  useRouter() {
+    return {
+      push: jest.fn(),
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+      back: jest.fn(),
+      pathname: '/',
+      query: {},
+      asPath: '/',
+    }
+  },
+  useSearchParams() {
+    return new URLSearchParams()
+  },
+  usePathname() {
+    return '/'
+  },
+}))
 
-// Note: MSW requires more polyfills (TransformStream, etc.) for Node environment
-// For now, we'll use Jest mocks instead of MSW
-// TODO: Add MSW when upgrading to Node 18+ which includes these APIs
+// Mock next-intl
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key) => key,
+  useLocale: () => 'en',
+}))
+
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+})
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
@@ -28,45 +61,3 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 }
-
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-})
-
-// Mock navigator.clipboard
-Object.assign(navigator, {
-  clipboard: {
-    writeText: jest.fn(() => Promise.resolve()),
-    readText: jest.fn(() => Promise.resolve('')),
-  },
-})
-
-// Suppress console errors in tests (optional)
-const originalError = console.error
-beforeAll(() => {
-  console.error = (...args) => {
-    if (
-      typeof args[0] === 'string' &&
-      (args[0].includes('Warning: ReactDOM.render') ||
-       args[0].includes('Warning: useLayoutEffect'))
-    ) {
-      return
-    }
-    originalError.call(console, ...args)
-  }
-})
-
-afterAll(() => {
-  console.error = originalError
-})

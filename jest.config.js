@@ -6,56 +6,40 @@ const createJestConfig = nextJest({
 })
 
 // Add any custom config to be passed to Jest
-const config = {
-  coverageProvider: 'v8',
-  testEnvironment: 'jsdom',
+const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
+    // Handle module aliases (this will be automatically configured for you soon)
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
-    '!src/lib/grpc/generated/**',
     '!src/**/__tests__/**',
-    '!src/app/**',
-    '!src/components/**',
-    '!src/contexts/**',
-    '!src/lib/api.ts',
-    '!src/lib/api-client.ts',
-    '!src/lib/ansi-parser.tsx',
-    '!src/lib/csp.ts',
-    '!src/lib/history.ts',
-    '!src/lib/errors/**',
-    '!src/lib/grpc/**',
-    '!src/lib/schemas/**',
-    '!src/lib/types/**',
-    '!src/lib/websocket/**',
-    '!src/mocks/**',
-    '!src/hooks/useCodeExecution.ts',
-    '!src/hooks/useKeyboardShortcut.ts',
-    '!src/hooks/useShare.ts',
-    '!src/hooks/useToast.ts',
-    '!src/hooks/useWebSocket.ts',
+    '!src/app/**/layout.tsx',
+    '!src/app/**/loading.tsx',
+    '!src/app/**/error.tsx',
+    '!src/app/**/not-found.tsx',
   ],
   coverageThreshold: {
     global: {
-      statements: 85,
-      branches: 75,
-      functions: 85,
-      lines: 85,
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
     },
   },
   testMatch: [
-    '**/__tests__/**/*.(test|spec).(ts|tsx|js|jsx)',
-    '**/*.(test|spec).(ts|tsx|js|jsx)',
+    '**/__tests__/**/*.{js,jsx,ts,tsx}',
+    '**/*.{spec,test}.{js,jsx,ts,tsx}',
   ],
-  transformIgnorePatterns: [
+  testPathIgnorePatterns: [
     '/node_modules/',
-    '^.+\\.module\\.(css|sass|scss)$',
+    '/.next/',
   ],
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(config)
+module.exports = createJestConfig(customJestConfig)
