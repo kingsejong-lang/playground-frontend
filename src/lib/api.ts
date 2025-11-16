@@ -211,6 +211,11 @@ export const languagesAPI = {
     const response = await api.get<Template>(`/languages/${languageId}/templates/${templateId}`);
     return response.data;
   },
+
+  formatCode: async (languageId: string, code: string): Promise<string> => {
+    const response = await api.post<{ formatted_code: string }>(`/languages/${languageId}/format`, { code });
+    return response.data.formatted_code;
+  },
 };
 
 export const executionAPI = {

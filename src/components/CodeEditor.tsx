@@ -25,6 +25,7 @@ interface CodeEditorProps {
   tabSize?: number;
   minimap?: boolean;
   theme?: string;
+  onFormat?: () => void;
 }
 
 export default function CodeEditor({
@@ -37,6 +38,7 @@ export default function CodeEditor({
   tabSize = 2,
   minimap = true,
   theme = 'vs-dark',
+  onFormat,
 }: CodeEditorProps) {
   const isKingsejongRegistered = useRef(false);
 
@@ -56,6 +58,20 @@ export default function CodeEditor({
       } catch (error) {
         console.error('Failed to register Kingsejong language:', error);
       }
+    }
+
+    // Register format code keyboard shortcut (Ctrl+Shift+F / Cmd+Shift+F)
+    if (onFormat) {
+      editor.addAction({
+        id: 'format-code',
+        label: 'Format Code',
+        keybindings: [
+          monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
+        ],
+        run: () => {
+          onFormat();
+        },
+      });
     }
   };
 

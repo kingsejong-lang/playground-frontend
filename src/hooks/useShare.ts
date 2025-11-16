@@ -11,6 +11,7 @@ import { extractErrorMessage } from '@/lib/guards';
 
 interface UseShareReturn {
   shareUrl: string | null;
+  shareId: string | null;
   sharing: boolean;
   error: string | null;
   createShare: (code: string, language: string, languages: Language[]) => Promise<void>;
@@ -23,6 +24,7 @@ export function useShare(): UseShareReturn {
   const searchParams = useSearchParams();
   const toast = useToast();
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
   const [sharing, setSharing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +64,7 @@ export function useShare(): UseShareReturn {
 
       const url = `${window.location.origin}${window.location.pathname}?share=${share.id}`;
       setShareUrl(url);
+      setShareId(share.id);
 
       // Copy to clipboard
       await navigator.clipboard.writeText(url);
@@ -105,11 +108,13 @@ export function useShare(): UseShareReturn {
 
   const closeShareModal = useCallback(() => {
     setShareUrl(null);
+    setShareId(null);
     setError(null);
   }, []);
 
   return {
     shareUrl,
+    shareId,
     sharing,
     error,
     createShare,

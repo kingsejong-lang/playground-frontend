@@ -44,6 +44,11 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
       description: 'Save settings',
     },
     {
+      category: 'Editor',
+      keys: formatShortcut('F', { ctrl: true, shift: true }),
+      description: 'Format code',
+    },
+    {
       category: 'UI',
       keys: formatShortcut(',', { ctrl: true }),
       description: 'Open settings',

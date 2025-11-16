@@ -26,6 +26,7 @@ const AuthModal = dynamicImport(() => import('@/components/AuthModal'));
 const HistorySidebar = dynamicImport(() => import('@/components/HistorySidebar'));
 const FileTree = dynamicImport(() => import('@/components/FileTree'));
 const ShortcutsHelp = dynamicImport(() => import('@/components/ShortcutsHelp').then(mod => ({ default: mod.ShortcutsHelp })));
+const TemplateGallery = dynamicImport(() => import('@/components/TemplateGallery').then(mod => ({ default: mod.TemplateGallery })));
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
@@ -36,6 +37,10 @@ import { useHistory } from '@/hooks/useHistory';
 import { useFiles } from '@/hooks/useFiles';
 import { HistoryItem } from '@/lib/history';
 import { useToast } from '@/hooks/useToast';
+import { languagesAPI } from '@/lib/api';
+import { useTheme } from '@/hooks/useTheme';
+import { useLayout } from '@/hooks/useLayout';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 // Force dynamic rendering for URL search params
 export const dynamic = 'force-dynamic';
@@ -45,6 +50,8 @@ function PlaygroundContent() {
   const { user, isAuthenticated, logout } = useAuth();
   const toast = useToast();
   const t = useTranslations();
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const { orientation, toggleOrientation } = useLayout();
 
   // Custom hooks
   const {
@@ -97,6 +104,7 @@ function PlaygroundContent() {
 
   const {
     shareUrl,
+    shareId,
     sharing,
     error: shareError,
     createShare,
@@ -111,6 +119,7 @@ function PlaygroundContent() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showFileTree, setShowFileTree] = useState(false);
+  const [showTemplateGallery, setShowTemplateGallery] = useState(false);
 
   // History hook
   const history = useHistory();
@@ -200,6 +209,28 @@ function PlaygroundContent() {
     }
   }, [activeFile?.content, editorSettings.execution_mode, selectedLanguage, languages, execute, executeWebSocket]);
 
+  // Helper to format code
+  const handleFormatCode = useCallback(async () => {
+    if (!activeFile?.content) return;
+
+    try {
+      const formattedCode = await languagesAPI.formatCode(selectedLanguage, activeFile.content);
+      updateFileContent(activeFile.id, formattedCode);
+      toast.success('Code formatted successfully');
+    } catch (error) {
+      console.error('Failed to format code:', error);
+      toast.error('Failed to format code');
+    }
+  }, [activeFile, selectedLanguage, updateFileContent, toast]);
+
+  // Helper to load template
+  const handleSelectTemplate = useCallback((code: string) => {
+    if (activeFile) {
+      updateFileContent(activeFile.id, code);
+      toast.success('Template loaded successfully');
+    }
+  }, [activeFile, updateFileContent, toast]);
+
   // Keyboard shortcuts
   useKeyboardShortcut('Enter', handleExecuteCode, {
     ctrl: true,
@@ -270,6 +301,27 @@ function PlaygroundContent() {
               selectedLanguage={selectedLanguage}
               onSelect={changeLanguage}
             />
+            <button
+              onClick={() => setShowTemplateGallery(true)}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label="Open template gallery"
+            >
+              📚 Templates
+            </button>
+            <button
+              onClick={toggleTheme}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} theme`}
+            >
+              {resolvedTheme === 'dark' ? '☀️' : '🌙'} Theme
+            </button>
+            <button
+              onClick={toggleOrientation}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label={`Switch to ${orientation === 'horizontal' ? 'vertical' : 'horizontal'} layout`}
+            >
+              {orientation === 'horizontal' ? '⬌' : '⬍'} Layout
+            </button>
             <button
               onClick={() => setShowFileTree(prev => !prev)}
               className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
@@ -354,79 +406,122 @@ function PlaygroundContent() {
           />
         )}
 
-        {/* Editor Panel */}
-        <div className="w-1/2 border-r border-gray-800">
-          <div className="h-full flex flex-col">
-            {/* File Tabs */}
-            <FileTabs
-              files={files}
-              activeFileId={activeFileId}
-              onSelectFile={setActiveFile}
-              onCloseFile={deleteFile}
-              onRenameFile={renameFile}
-              onAddFile={handleAddFile}
-            />
-
-            <div className="flex-1 min-h-0">
-              <CodeEditor
-                value={activeFile?.content || ''}
-                onChange={handleContentChange}
-                language={selectedLanguage}
-                readOnly={false}
-                fontSize={editorSettings.font_size}
-                fontFamily={editorSettings.font_family}
-                tabSize={editorSettings.tab_size}
-                minimap={editorSettings.minimap}
-                theme={themeSettings.color_scheme}
+        {/* Resizable Panels */}
+        <PanelGroup direction={orientation} className="flex-1">
+          {/* Editor Panel */}
+          <Panel defaultSize={50} minSize={20}>
+            <div className="h-full flex flex-col border-r border-gray-800">
+              {/* File Tabs */}
+              <FileTabs
+                files={files}
+                activeFileId={activeFileId}
+                onSelectFile={setActiveFile}
+                onCloseFile={deleteFile}
+                onRenameFile={renameFile}
+                onAddFile={handleAddFile}
               />
-            </div>
-          </div>
-        </div>
 
-        {/* Output Panel */}
-        <div className="w-1/2">
-          <div className="h-full flex flex-col">
-            <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
-              <h2 className="text-sm font-medium text-gray-300">Output</h2>
+              <div className="flex-1 min-h-0">
+                <CodeEditor
+                  value={activeFile?.content || ''}
+                  onChange={handleContentChange}
+                  language={selectedLanguage}
+                  readOnly={false}
+                  fontSize={editorSettings.font_size}
+                  fontFamily={editorSettings.font_family}
+                  tabSize={editorSettings.tab_size}
+                  minimap={editorSettings.minimap}
+                  theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
+                  onFormat={handleFormatCode}
+                />
+              </div>
             </div>
-            <div className="flex-1 min-h-0">
-              <OutputPanel
-                output={output}
-                loading={executing}
-                error={error}
-                streaming={streaming}
-                streamEvents={streamEvents}
-                onClear={resetExecution}
-              />
+          </Panel>
+
+          {/* Resize Handle */}
+          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-blue-500 transition-colors cursor-col-resize data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:h-1 data-[panel-group-direction=vertical]:cursor-row-resize" />
+
+          {/* Output Panel */}
+          <Panel defaultSize={50} minSize={20}>
+            <div className="h-full flex flex-col">
+              <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
+                <h2 className="text-sm font-medium text-gray-300">Output</h2>
+              </div>
+              <div className="flex-1 min-h-0">
+                <OutputPanel
+                  output={output}
+                  loading={executing}
+                  error={error}
+                  streaming={streaming}
+                  streamEvents={streamEvents}
+                  onClear={resetExecution}
+                />
+              </div>
             </div>
-          </div>
-        </div>
+          </Panel>
+        </PanelGroup>
       </div>
 
       {/* Share URL Modal */}
-      {shareUrl && (
+      {shareUrl && shareId && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           role="dialog"
           aria-labelledby="share-modal-title"
           aria-modal="true"
         >
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <h3 id="share-modal-title" className="text-lg font-bold text-white mb-4">Share Your Code</h3>
             <p className="text-sm text-gray-400 mb-4">
               Your code has been shared! The URL has been copied to clipboard.
             </p>
-            <div className="bg-gray-800 border border-gray-700 rounded p-3 mb-4">
-              <code className="text-sm text-blue-400 break-all">{shareUrl}</code>
-            </div>
-            <div className="flex gap-3">
+
+            {/* Share URL */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Share URL
+              </label>
+              <div className="bg-gray-800 border border-gray-700 rounded p-3 mb-2">
+                <code className="text-sm text-blue-400 break-all">{shareUrl}</code>
+              </div>
               <button
                 onClick={copyToClipboard}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                aria-label="Copy share URL to clipboard again"
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                aria-label="Copy share URL to clipboard"
               >
-                Copy Again
+                📋 Copy Share URL
               </button>
+            </div>
+
+            {/* Embed Code */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Embed Code (iframe)
+              </label>
+              <div className="bg-gray-800 border border-gray-700 rounded p-3 mb-2 overflow-x-auto">
+                <code className="text-xs text-green-400">
+                  {`<iframe src="${window.location.origin}/embed/${shareId}" width="100%" height="600" frameborder="0"></iframe>`}
+                </code>
+              </div>
+              <button
+                onClick={async () => {
+                  const embedCode = `<iframe src="${window.location.origin}/embed/${shareId}" width="100%" height="600" frameborder="0"></iframe>`;
+                  try {
+                    await navigator.clipboard.writeText(embedCode);
+                    toast.success('Embed code copied to clipboard!');
+                  } catch (err) {
+                    console.error('Failed to copy:', err);
+                    toast.error('Failed to copy to clipboard');
+                  }
+                }}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                aria-label="Copy embed code to clipboard"
+              >
+                📦 Copy Embed Code
+              </button>
+            </div>
+
+            <div className="flex gap-3">
               <button
                 onClick={closeShareModal}
                 className="flex-1 px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
@@ -466,6 +561,14 @@ function PlaygroundContent() {
         onClose={() => setShowHistory(false)}
         onLoadHistory={handleLoadHistory}
         languages={languages}
+      />
+
+      {/* Template Gallery */}
+      <TemplateGallery
+        isOpen={showTemplateGallery}
+        onClose={() => setShowTemplateGallery(false)}
+        selectedLanguage={selectedLanguage}
+        onSelectTemplate={handleSelectTemplate}
       />
     </div>
   );
