@@ -27,6 +27,7 @@ const HistorySidebar = dynamicImport(() => import('@/components/HistorySidebar')
 const FileTree = dynamicImport(() => import('@/components/FileTree'));
 const ShortcutsHelp = dynamicImport(() => import('@/components/ShortcutsHelp').then(mod => ({ default: mod.ShortcutsHelp })));
 const TemplateGallery = dynamicImport(() => import('@/components/TemplateGallery').then(mod => ({ default: mod.TemplateGallery })));
+const SnippetLibrary = dynamicImport(() => import('@/components/SnippetLibrary'));
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguages } from '@/hooks/useLanguages';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
@@ -120,6 +121,7 @@ function PlaygroundContent() {
   const [showHistory, setShowHistory] = useState(false);
   const [showFileTree, setShowFileTree] = useState(false);
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
+  const [showSnippetLibrary, setShowSnippetLibrary] = useState(false);
 
   // History hook
   const history = useHistory();
@@ -307,6 +309,13 @@ function PlaygroundContent() {
               aria-label="Open template gallery"
             >
               📚 Templates
+            </button>
+            <button
+              onClick={() => setShowSnippetLibrary(true)}
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              aria-label="Open snippet library"
+            >
+              📝 Snippets
             </button>
             <button
               onClick={toggleTheme}
@@ -569,6 +578,19 @@ function PlaygroundContent() {
         onClose={() => setShowTemplateGallery(false)}
         selectedLanguage={selectedLanguage}
         onSelectTemplate={handleSelectTemplate}
+      />
+
+      {/* Snippet Library */}
+      <SnippetLibrary
+        isOpen={showSnippetLibrary}
+        onClose={() => setShowSnippetLibrary(false)}
+        onSelectSnippet={(code) => {
+          if (activeFile) {
+            updateFileContent(activeFile.id, code);
+            toast.success('Snippet loaded successfully');
+          }
+        }}
+        currentLanguage={selectedLanguage}
       />
     </div>
   );
