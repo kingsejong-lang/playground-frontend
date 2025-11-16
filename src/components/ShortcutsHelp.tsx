@@ -23,6 +23,7 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
   const modKey = getModifierKeyName();
 
   const shortcuts: Shortcut[] = [
+    // Execution
     {
       category: 'Execution',
       keys: formatShortcut('Enter', { ctrl: true }),
@@ -30,43 +31,67 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
     },
     {
       category: 'Execution',
-      keys: formatShortcut('Enter', { ctrl: true, shift: true }),
-      description: 'Run code (streaming)',
-    },
-    {
-      category: 'Execution',
       keys: formatShortcut('k', { ctrl: true }),
       description: 'Clear output',
     },
-    {
-      category: 'Editor',
-      keys: formatShortcut('s', { ctrl: true }),
-      description: 'Save settings',
-    },
+    // Editor
     {
       category: 'Editor',
       keys: formatShortcut('F', { ctrl: true, shift: true }),
       description: 'Format code',
     },
+    // Windows & Panels
     {
-      category: 'UI',
+      category: 'Windows & Panels',
       keys: formatShortcut(',', { ctrl: true }),
       description: 'Open settings',
     },
     {
-      category: 'UI',
+      category: 'Windows & Panels',
       keys: formatShortcut('h', { ctrl: true }),
-      description: 'Open history',
+      description: 'Toggle history',
     },
     {
-      category: 'UI',
+      category: 'Windows & Panels',
+      keys: formatShortcut('f', { ctrl: true }),
+      description: 'Toggle file tree',
+    },
+    {
+      category: 'Windows & Panels',
+      keys: formatShortcut('t', { ctrl: true }),
+      description: 'Open template gallery',
+    },
+    {
+      category: 'Windows & Panels',
+      keys: formatShortcut('l', { ctrl: true }),
+      description: 'Open snippet library',
+    },
+    {
+      category: 'Windows & Panels',
       keys: '?',
       description: 'Show keyboard shortcuts',
     },
     {
-      category: 'UI',
+      category: 'Windows & Panels',
       keys: 'Escape',
       description: 'Close modal/dialog',
+    },
+    // Sharing & Files
+    {
+      category: 'Sharing & Files',
+      keys: formatShortcut('s', { ctrl: true }),
+      description: 'Share code',
+    },
+    // View & Theme
+    {
+      category: 'View & Theme',
+      keys: formatShortcut('/', { ctrl: true }),
+      description: 'Toggle dark/light theme',
+    },
+    {
+      category: 'View & Theme',
+      keys: formatShortcut('b', { ctrl: true }),
+      description: 'Toggle layout orientation',
     },
   ];
 

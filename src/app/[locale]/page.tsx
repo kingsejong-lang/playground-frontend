@@ -253,6 +253,37 @@ function PlaygroundContent() {
 
   useKeyboardShortcut('?', () => setShowShortcutsHelp(prev => !prev));
 
+  useKeyboardShortcut('s', () => createShare(getCurrentCode(), selectedLanguage, languages), {
+    ctrl: true,
+    enabled: !sharing,
+  });
+
+  useKeyboardShortcut('t', () => setShowTemplateGallery(prev => !prev), {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut('l', () => setShowSnippetLibrary(prev => !prev), {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut('f', () => setShowFileTree(prev => !prev), {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut('f', handleFormatCode, {
+    ctrl: true,
+    shift: true,
+    enabled: !!activeFile?.content,
+  });
+
+  useKeyboardShortcut('/', toggleTheme, {
+    ctrl: true,
+  });
+
+  useKeyboardShortcut('b', toggleOrientation, {
+    ctrl: true,
+  });
+
   // Load shared code from URL params
   useEffect(() => {
     const shareId = searchParams.get('share');
