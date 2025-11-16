@@ -174,16 +174,21 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
   // Auto-connect on mount if enabled
   useEffect(() => {
-    if (enabled) {
+    let shouldConnect = enabled;
+
+    if (shouldConnect) {
       connect().catch(error => {
         console.error('[WebSocket Hook] Auto-connect failed:', error);
       });
     }
 
+    // Cleanup on unmount or when enabled changes to false
     return () => {
       disconnect();
     };
-  }, [enabled, connect, disconnect]);
+  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: connect/disconnect are intentionally excluded to prevent reconnection loops
+  // caused by callback recreation in parent components
 
   return {
     connected,

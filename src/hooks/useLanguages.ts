@@ -29,11 +29,13 @@ func main() {
     fmt.Printf("5 + 3 = %d\\n", result)
 }
 `,
-  kingsejong_v1_0: `함수 시작() {
-    // Welcome to Kingsejong Playground
-    출력("안녕, 세상!");
-    출력("Hello, World!");
-}
+  kingsejong_v0_3: `# Welcome to Kingsejong Playground
+출력("안녕하세요, KingSejong!")
+출력("한글로 프로그래밍하는 자연스러운 언어")
+
+# Try some math
+결과 = 5 + 3
+출력("5 + 3 = ",결과)
 `,
 };
 
@@ -67,7 +69,7 @@ export function useLanguages(): UseLanguagesReturn {
       const langs = await languagesAPI.list();
       setLanguages(langs);
       if (langs.length > 0) {
-        const defaultLang = langs.find(l => l.id === 'python_3_12') || langs[0];
+        const defaultLang = langs.find(l => l.id === 'kingsejong_v0_3') || langs[0];
         setSelectedLanguage(defaultLang.id);
         setCode(DEFAULT_CODE[defaultLang.id] || '// Start coding...');
       }

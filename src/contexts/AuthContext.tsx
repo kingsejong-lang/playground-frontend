@@ -1,7 +1,14 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI, AuthResponse, User } from '@/lib/api-client';
+import { authAPI, AuthResponse } from '@/lib/api';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  roles: string[];
+}
 
 interface AuthContextType {
   user: User | null;
@@ -26,10 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       // Try to get user info using httpOnly cookie
-      const result = await authAPI.getMe();
-      if (result.ok) {
-        setUser(result.value);
-      }
+      const userData = await authAPI.getMe();
+      setUser(userData);
     } catch (error) {
       console.error('Failed to check auth:', error);
       // Cookie might be expired or invalid
@@ -47,12 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const result = await authAPI.login({ email, password });
-      if (result.ok) {
-        handleAuthResponse(result.value);
-      } else {
-        throw result.error;
-      }
+      const response = await authAPI.login({ email, password });
+      handleAuthResponse(response);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -61,12 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const result = await authAPI.register({ email, password, name });
-      if (result.ok) {
-        handleAuthResponse(result.value);
-      } else {
-        throw result.error;
-      }
+      const response = await authAPI.register({ email, password, name });
+      handleAuthResponse(response);
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;

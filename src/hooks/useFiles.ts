@@ -28,7 +28,7 @@ export interface UseFilesReturn {
 /**
  * Hook for managing multiple files
  */
-export function useFiles(initialFileName: string = 'main.ks', initialContent: string = ''): UseFilesReturn {
+export function useFiles(initialFileName: string = 'main.ksj', initialContent: string = ''): UseFilesReturn {
   const [files, setFiles] = useState<FileItem[]>([
     {
       id: generateFileId(),
@@ -62,7 +62,7 @@ export function useFiles(initialFileName: string = 'main.ks', initialContent: st
       if (filtered.length === 0) {
         const defaultFile: FileItem = {
           id: generateFileId(),
-          name: 'main.ks',
+          name: 'main.ksj',
           content: '',
         };
         setActiveFileId(defaultFile.id);
@@ -124,7 +124,7 @@ export function useFiles(initialFileName: string = 'main.ks', initialContent: st
   const clearFiles = useCallback(() => {
     const defaultFile: FileItem = {
       id: generateFileId(),
-      name: 'main.ks',
+      name: 'main.ksj',
       content: '',
     };
     setFiles([defaultFile]);
@@ -170,6 +170,7 @@ export function getFileIcon(filename: string): string {
   const iconMap: Record<string, string> = {
     // Kingsejong
     'ks': '👑',
+    'ksj': '👑',
     // Python
     'py': '🐍',
     'pyw': '🐍',

@@ -15,6 +15,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   tab_size: 2,
   auto_save: false,
   minimap: true,
+  execution_mode: 'http',
 };
 
 const DEFAULT_THEME_SETTINGS: ThemeSettings = {
@@ -190,6 +191,26 @@ export default function SettingsModal({
                   }`}
                 />
               </button>
+            </div>
+
+            {/* Execution Mode */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Execution Mode
+              </label>
+              <select
+                value={editorSettings.execution_mode || 'http'}
+                onChange={(e) =>
+                  setEditorSettings({ ...editorSettings, execution_mode: e.target.value as 'http' | 'websocket' })
+                }
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="http">HTTP (Recommended)</option>
+                <option value="websocket">WebSocket (Real-time)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                HTTP is more stable. WebSocket provides real-time streaming but may have connection issues.
+              </p>
             </div>
           </div>
         </div>

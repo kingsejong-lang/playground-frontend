@@ -15,6 +15,10 @@ interface ExecutionEvent {
   timestamp: string;
 }
 
+interface UseCodeExecutionOptions {
+  enableWebSocket?: boolean;
+}
+
 interface UseCodeExecutionReturn {
   output: ExecuteResponse | null;
   loading: boolean;
@@ -30,7 +34,8 @@ interface UseCodeExecutionReturn {
   reset: () => void;
 }
 
-export function useCodeExecution(): UseCodeExecutionReturn {
+export function useCodeExecution(options?: UseCodeExecutionOptions): UseCodeExecutionReturn {
+  const { enableWebSocket = false } = options || {};
   const [output, setOutput] = useState<ExecuteResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [streaming, setStreaming] = useState<boolean>(false);
@@ -41,7 +46,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   const WS_URL = API_URL.replace('http', 'ws') + '/api/v1/ws';
 
-  // WebSocket hook
+  // WebSocket hook (only enabled if option is set)
   const {
     connected: wsConnected,
     connecting: wsConnecting,
@@ -49,7 +54,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
     execute: wsExecute,
   } = useWebSocket({
     url: WS_URL,
-    enabled: true,
+    enabled: enableWebSocket,
     onExecutionEvent: (event: WSExecutionEvent) => {
       // Convert WebSocket event to ExecutionEvent format
       setStreamEvents((prev) => [...prev, {

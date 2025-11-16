@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamicImport from 'next/dynamic';
-import LanguageToggle from '@/components/LanguageToggle';
 import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
 import FileTabs from '@/components/FileTabs';
@@ -70,7 +69,14 @@ function PlaygroundContent() {
     setActiveFile,
     getFilesObject,
     loadFiles,
-  } = useFiles('main.ks', '');
+  } = useFiles('main.ksj', '');
+
+  const {
+    editorSettings,
+    themeSettings,
+    error: settingsError,
+    saveSettings,
+  } = useSettings(isAuthenticated);
 
   const {
     output,
@@ -85,7 +91,9 @@ function PlaygroundContent() {
     executeStream,
     executeWebSocket,
     reset: resetExecution,
-  } = useCodeExecution();
+  } = useCodeExecution({
+    enableWebSocket: editorSettings.execution_mode === 'websocket',
+  });
 
   const {
     shareUrl,
@@ -96,13 +104,6 @@ function PlaygroundContent() {
     copyToClipboard,
     closeShareModal,
   } = useShare();
-
-  const {
-    editorSettings,
-    themeSettings,
-    error: settingsError,
-    saveSettings,
-  } = useSettings(isAuthenticated);
 
   // Local UI state
   const [showSettings, setShowSettings] = useState(false);
@@ -117,23 +118,33 @@ function PlaygroundContent() {
   // Combined error
   const error = languageError || executionError || shareError || settingsError;
 
+  // Track initial code setup per file and language
+  const initializedRef = useRef<Set<string>>(new Set());
+
   // Set initial code when language loads or changes
   useEffect(() => {
-    console.log('🔍 Editor Debug:', {
-      hasDefaultCode: !!defaultCode,
-      hasActiveFile: !!activeFile,
-      activeFileContent: activeFile?.content?.substring(0, 50),
-      selectedLanguage,
-    });
+    if (!defaultCode || !activeFileId) return;
 
-    if (defaultCode && activeFile) {
-      const isEmpty = !activeFile.content || activeFile.content.trim() === '';
-      console.log('📝 Setting code:', { isEmpty, defaultCodeLength: defaultCode.length });
+    // Create a unique key for this file + language combination
+    const key = `${activeFileId}_${selectedLanguage}`;
+
+    // Skip if already initialized for this combination
+    if (initializedRef.current.has(key)) return;
+
+    const currentFile = files.find(f => f.id === activeFileId);
+    if (currentFile) {
+      const isEmpty = !currentFile.content || currentFile.content.trim() === '';
       if (isEmpty) {
-        updateFileContent(activeFile.id, defaultCode);
+        updateFileContent(activeFileId, defaultCode);
+        initializedRef.current.add(key);
       }
     }
-  }, [defaultCode, activeFile?.id, selectedLanguage, updateFileContent]);
+  }, [defaultCode, activeFileId, selectedLanguage, files, updateFileContent]);
+
+  // Clear initialization tracking when language changes
+  useEffect(() => {
+    initializedRef.current.clear();
+  }, [selectedLanguage]);
 
   // Load history item
   const handleLoadHistory = (item: HistoryItem) => {
@@ -147,7 +158,7 @@ function PlaygroundContent() {
   // Handle adding new file
   const handleAddFile = () => {
     const fileNumber = files.length + 1;
-    const newFileName = `file${fileNumber}.ks`;
+    const newFileName = `file${fileNumber}.ksj`;
     addFile(newFileName, '');
     toast.success(`Created ${newFileName}`);
   };
@@ -176,8 +187,21 @@ function PlaygroundContent() {
     }
   }, [output, executing, streaming]);
 
+  // Helper to execute code based on execution mode setting
+  const handleExecuteCode = useCallback(() => {
+    const code = activeFile?.content || '';
+    const mode = editorSettings.execution_mode || 'http';
+
+    if (mode === 'websocket') {
+      executeWebSocket(code, selectedLanguage, languages);
+    } else {
+      // Default to HTTP
+      execute(code, selectedLanguage, languages);
+    }
+  }, [activeFile?.content, editorSettings.execution_mode, selectedLanguage, languages, execute, executeWebSocket]);
+
   // Keyboard shortcuts
-  useKeyboardShortcut('Enter', () => executeStream(getCurrentCode(), selectedLanguage, languages), {
+  useKeyboardShortcut('Enter', handleExecuteCode, {
     ctrl: true,
     enabled: !executing && !streaming,
   });
@@ -241,7 +265,6 @@ function PlaygroundContent() {
             <p className="text-sm text-gray-400 mt-1">{t('app.description')}</p>
           </div>
           <div className="flex items-center gap-4">
-            <LanguageToggle />
             <LanguageSelector
               languages={languages}
               selectedLanguage={selectedLanguage}
@@ -303,7 +326,7 @@ function PlaygroundContent() {
             )}
 
             <button
-              onClick={() => executeStream(getCurrentCode(), selectedLanguage, languages)}
+              onClick={handleExecuteCode}
               disabled={executing || streaming}
               className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
               aria-label="Run code"

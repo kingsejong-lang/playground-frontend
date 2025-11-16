@@ -11,13 +11,13 @@ export interface CSPDirectives {
   'img-src'?: string[];
   'font-src'?: string[];
   'connect-src'?: string[];
+  'worker-src'?: string[];
   'frame-src'?: string[];
   'frame-ancestors'?: string[];
   'base-uri'?: string[];
   'form-action'?: string[];
   'object-src'?: string[];
   'media-src'?: string[];
-  'worker-src'?: string[];
   'manifest-src'?: string[];
   'upgrade-insecure-requests'?: boolean;
   'block-all-mixed-content'?: boolean;
@@ -57,6 +57,7 @@ export function getDevelopmentCSP(): CSPDirectives {
     'style-src': [
       "'self'",
       "'unsafe-inline'", // Required for Monaco Editor and Tailwind
+      'https://cdn.jsdelivr.net', // Monaco Editor CDN styles
     ],
     'img-src': [
       "'self'",
@@ -71,8 +72,14 @@ export function getDevelopmentCSP(): CSPDirectives {
     'connect-src': [
       "'self'",
       'http://localhost:8080', // Backend API
-      'ws://localhost:3000', // Next.js HMR WebSocket
+      'ws://localhost:3001', // Next.js HMR WebSocket
+      'ws://localhost:8080', // Backend WebSocket
       'wss://localhost:8080', // Backend WebSocket (if using wss)
+      'https://cdn.jsdelivr.net', // Monaco Editor source maps
+    ],
+    'worker-src': [
+      "'self'",
+      'blob:', // Monaco Editor workers
     ],
     'frame-src': ["'none'"],
     'frame-ancestors': ["'none'"],
@@ -96,6 +103,7 @@ export function getProductionCSP(): CSPDirectives {
     'style-src': [
       "'self'",
       "'unsafe-inline'", // Monaco Editor and Tailwind require inline styles
+      'https://cdn.jsdelivr.net', // Monaco Editor CDN styles
     ],
     'img-src': [
       "'self'",
@@ -110,6 +118,11 @@ export function getProductionCSP(): CSPDirectives {
     'connect-src': [
       "'self'",
       process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080', // Backend API
+      'https://cdn.jsdelivr.net', // Monaco Editor source maps
+    ],
+    'worker-src': [
+      "'self'",
+      'blob:', // Monaco Editor workers
     ],
     'frame-src': ["'none'"],
     'frame-ancestors': ["'none'"],

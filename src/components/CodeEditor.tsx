@@ -1,8 +1,19 @@
 'use client';
 
-import { Editor, OnMount } from '@monaco-editor/react';
-import { useRef } from 'react';
+import { Editor, OnMount, loader } from '@monaco-editor/react';
+import { useRef, useEffect } from 'react';
 import { registerKingsejongLanguage, kingsejongLanguageId } from '@/lib/monaco/kingsejong-language';
+
+// Configure Monaco loader to avoid React DevTools conflicts
+if (typeof window !== 'undefined') {
+  loader.config({
+    'vs/nls': {
+      availableLanguages: {
+        '*': 'en',
+      },
+    },
+  });
+}
 
 interface CodeEditorProps {
   value: string;

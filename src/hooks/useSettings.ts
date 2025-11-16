@@ -13,6 +13,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   tab_size: 2,
   auto_save: false,
   minimap: true,
+  execution_mode: 'http', // Default execution mode
 };
 
 const DEFAULT_THEME_SETTINGS: ThemeSettings = {

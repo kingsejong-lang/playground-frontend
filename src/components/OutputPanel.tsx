@@ -147,6 +147,63 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
     );
   }
 
+  // Show completed stream events if available
+  if (!output && streamEvents && streamEvents.length > 0) {
+    return (
+      <div className="h-full bg-gray-900 flex flex-col">
+        <div className="border-b border-gray-700">
+          <div className="flex items-center justify-between px-4 py-2">
+            <span className="text-sm font-medium text-blue-400">✓ Execution Completed</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopy}
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                title="Copy output"
+                aria-label="Copy output to clipboard"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <button
+                onClick={handleDownload}
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                title="Download output"
+                aria-label="Download output as text file"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
+              {onClear && (
+                <button
+                  onClick={onClear}
+                  className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  title="Clear output"
+                  aria-label="Clear output"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <div ref={outputRef} className="flex-1 overflow-auto p-4">
+          {streamEvents.map((event, index) => (
+            <div key={index} className="mb-2">
+              <div className="text-xs text-gray-500 mb-1">
+                [{event.type}] {new Date(event.timestamp).toLocaleTimeString()}
+              </div>
+              <pre className="text-gray-200 text-sm font-mono whitespace-pre-wrap">{event.message}</pre>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!output) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-900 text-gray-500">

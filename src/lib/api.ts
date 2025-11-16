@@ -7,20 +7,94 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable httpOnly cookies
 });
 
-// Add request interceptor to include JWT token in headers
+// CSRF token cache
+let csrfToken: string | null = null;
+let csrfExpiresAt: number = 0;
+
+// Get CSRF token (with caching)
+export async function getCsrfToken(): Promise<string> {
+  // Return cached token if still valid
+  if (csrfToken && Date.now() < csrfExpiresAt) {
+    return csrfToken;
+  }
+
+  try {
+    const response = await axios.get(`${API_URL}/api/v1/csrf/token`, {
+      withCredentials: true,
+    });
+    csrfToken = response.data.csrf_token;
+    // Cache for 5 minutes (same as backend)
+    csrfExpiresAt = Date.now() + 5 * 60 * 1000;
+    return csrfToken;
+  } catch (error) {
+    console.error('Failed to get CSRF token:', error);
+    throw error;
+  }
+}
+
+// Clear CSRF token cache
+export function clearCsrfCache() {
+  csrfToken = null;
+  csrfExpiresAt = 0;
+}
+
+// Add request interceptor to include CSRF token for state-changing requests
 api.interceptors.request.use(
-  (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    // Add CSRF token for POST, PUT, DELETE, PATCH requests
+    if (config.method && ['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())) {
+      try {
+        const token = await getCsrfToken();
+        config.headers['X-CSRF-Token'] = token;
+      } catch (error) {
+        console.error('Failed to add CSRF token:', error);
       }
     }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for automatic token refresh and CSRF retry
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 (Unauthorized), try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        // Refresh endpoint will automatically use refresh_token from httpOnly cookie
+        await axios.post(`${API_URL}/api/v1/auth/refresh`, {}, { withCredentials: true });
+        // Retry original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, user needs to login again
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // If 403 (Forbidden) and CSRF-related, get new token and retry
+    if (error.response?.status === 403 && !originalRequest._csrfRetry) {
+      originalRequest._csrfRetry = true;
+      try {
+        // Clear cached CSRF token and get a new one
+        clearCsrfCache();
+        const token = await getCsrfToken();
+        originalRequest.headers['X-CSRF-Token'] = token;
+        // Retry original request
+        return api(originalRequest);
+      } catch (csrfError) {
+        return Promise.reject(csrfError);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -102,6 +176,7 @@ export interface EditorSettings {
   tab_size: number;
   auto_save: boolean;
   minimap: boolean;
+  execution_mode?: 'http' | 'websocket'; // Default: 'http'
 }
 
 export interface ThemeSettings {
@@ -187,21 +262,13 @@ export interface LoginRequest {
 }
 
 export interface AuthResponse {
-  tokens: {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-  };
+  // Tokens are now in httpOnly cookies, not in response body
   user: {
     id: string;
     email: string;
     name: string;
     roles: string[];
   };
-}
-
-export interface RefreshTokenRequest {
-  refresh_token: string;
 }
 
 export const authAPI = {
@@ -215,9 +282,14 @@ export const authAPI = {
     return response.data;
   },
 
-  refresh: async (request: RefreshTokenRequest): Promise<{ access_token: string; refresh_token: string; expires_in: number }> => {
-    const response = await api.post<{ access_token: string; refresh_token: string; expires_in: number }>('/auth/refresh', request);
-    return response.data;
+  refresh: async (): Promise<void> => {
+    // Refresh token is automatically sent via httpOnly cookie
+    await api.post('/auth/refresh', {});
+  },
+
+  logout: async (): Promise<void> => {
+    await api.post('/auth/logout', {});
+    clearCsrfCache(); // Clear CSRF cache on logout
   },
 
   getMe: async (): Promise<{ id: string; email: string; name: string; roles: string[] }> => {

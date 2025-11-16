@@ -3,6 +3,8 @@
  * Provides robust streaming capabilities with connection management.
  */
 
+import { getCsrfToken } from './api';
+
 export type SSEConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
 export interface SSEEvent {
@@ -72,11 +74,15 @@ export class SSEClient {
       // Create new AbortController for this connection
       this.abortController = new AbortController();
 
+      // Get CSRF token
+      const csrfToken = await getCsrfToken();
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
       const response = await fetch(`${API_URL}${this.config.url}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         credentials: 'include', // Include httpOnly cookies
         body: JSON.stringify(this.config.requestBody),
