@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamicImport from 'next/dynamic';
+import { Play, Settings, Share2, History, FileText, Moon, Sun, Layout } from 'lucide-react';
 import LanguageSelector from '@/components/LanguageSelector';
 import OutputPanel from '@/components/OutputPanel';
 import FileTabs from '@/components/FileTabs';
@@ -312,7 +313,7 @@ function PlaygroundContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
+    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-void)' }}>
       {/* Skip to main content link for keyboard users */}
       <a
         href="#main-content"
@@ -321,77 +322,119 @@ function PlaygroundContent() {
         Skip to main content
       </a>
 
-      {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+      {/* Header - Control Sanctum */}
+      <header className="px-6 py-4" style={{ backgroundColor: 'var(--editor-zone)', borderBottom: '1px solid var(--border-hair)' }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">{t('app.title')}</h1>
-            <p className="text-sm text-gray-400 mt-1">{t('app.description')}</p>
+            <h1 className="text-xl font-light tracking-wide" style={{ color: 'var(--text-primary)' }}>
+              {t('app.title')}
+            </h1>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-whisper)' }}>
+              {t('app.description')}
+            </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <LanguageSelector
               languages={languages}
               selectedLanguage={selectedLanguage}
               onSelect={changeLanguage}
             />
+
+            {/* Secondary Actions - Neutral Gray */}
             <button
               onClick={() => setShowTemplateGallery(true)}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              className="h-10 px-4 text-xs transition-colors rounded"
+              style={{
+                color: 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               aria-label="Open template gallery"
             >
-              📚 Templates
+              <FileText className="w-4 h-4 mr-2 inline" />
+              Templates
             </button>
             <button
-              onClick={() => setShowSnippetLibrary(true)}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
-              aria-label="Open snippet library"
+              onClick={() => setShowHistory(true)}
+              className="h-10 px-4 text-xs transition-colors rounded"
+              style={{
+                color: 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              aria-label="Open execution history"
             >
-              📝 Snippets
-            </button>
-            <button
-              onClick={toggleTheme}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
-              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} theme`}
-            >
-              {resolvedTheme === 'dark' ? '☀️' : '🌙'} Theme
-            </button>
-            <button
-              onClick={toggleOrientation}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
-              aria-label={`Switch to ${orientation === 'horizontal' ? 'vertical' : 'horizontal'} layout`}
-            >
-              {orientation === 'horizontal' ? '⬌' : '⬍'} Layout
-            </button>
-            <button
-              onClick={() => setShowFileTree(prev => !prev)}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
-              aria-label={showFileTree ? "Close file tree" : "Open file tree"}
-            >
-              📁 Files
+              <History className="w-4 h-4 mr-2 inline" />
+              History
             </button>
             <button
               onClick={() => createShare(getCurrentCode(), selectedLanguage, languages)}
               disabled={sharing}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+              className="h-10 px-4 text-xs transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                color: 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => !sharing && (e.currentTarget.style.backgroundColor = 'var(--border-hair)')}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               aria-label="Share code"
               aria-busy={sharing}
             >
-              {sharing ? 'Sharing...' : '🔗 Share'}
+              <Share2 className="w-4 h-4 mr-2 inline" />
+              {sharing ? 'Sharing...' : 'Share'}
+            </button>
+
+            <div className="h-6" style={{ width: '1px', backgroundColor: 'var(--border-hair)' }} />
+
+            <button
+              onClick={toggleOrientation}
+              className="h-10 px-3 text-xs transition-colors rounded"
+              style={{
+                color: 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              aria-label={`Switch to ${orientation === 'horizontal' ? 'vertical' : 'horizontal'} layout`}
+            >
+              <Layout className="w-4 h-4" />
+            </button>
+            <button
+              onClick={toggleTheme}
+              className="h-10 px-3 text-xs transition-colors rounded"
+              style={{
+                color: 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} theme`}
+            >
+              {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+              className="h-10 px-3 text-xs transition-colors rounded"
+              style={{
+                color: 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               aria-label="Open settings"
             >
-              ⚙️ Settings
+              <Settings className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setShowHistory(true)}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
-              aria-label="Open execution history"
-            >
-              📜 History
-            </button>
+
+            <div className="h-6" style={{ width: '1px', backgroundColor: 'var(--border-hair)' }} />
 
             {/* Auth buttons */}
             {isAuthenticated ? (
@@ -417,14 +460,23 @@ function PlaygroundContent() {
               </button>
             )}
 
+            {/* Primary Action - Commanding Blue */}
             <button
               onClick={handleExecuteCode}
               disabled={executing || streaming}
-              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
+              className="h-10 px-6 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded"
+              style={{
+                backgroundColor: 'var(--accent-indigo)',
+                color: '#ffffff',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => !executing && !streaming && (e.currentTarget.style.backgroundColor = '#3d4daa')}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-indigo)'}
               aria-label="Run code"
               aria-busy={executing || streaming}
             >
-              {executing || streaming ? 'Running...' : '▶ Run'}
+              <Play className="w-4 h-4 mr-2 inline" />
+              {executing || streaming ? 'Running...' : 'Run'}
             </button>
           </div>
         </div>
@@ -448,9 +500,9 @@ function PlaygroundContent() {
 
         {/* Resizable Panels */}
         <PanelGroup direction={orientation} className="flex-1">
-          {/* Editor Panel */}
+          {/* Editor Panel - Editor Sanctuary */}
           <Panel defaultSize={50} minSize={20}>
-            <div className="h-full flex flex-col border-r border-gray-800">
+            <div className="h-full flex flex-col" style={{ borderRight: '1px solid var(--border-hair)', backgroundColor: 'var(--editor-zone)' }}>
               {/* File Tabs */}
               <FileTabs
                 files={files}
@@ -471,21 +523,26 @@ function PlaygroundContent() {
                   fontFamily={editorSettings.font_family}
                   tabSize={editorSettings.tab_size}
                   minimap={editorSettings.minimap}
-                  theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
+                  theme={resolvedTheme === 'dark' ? 'code-sanctuary-dark' : 'code-sanctuary-light'}
                   onFormat={handleFormatCode}
                 />
               </div>
             </div>
           </Panel>
 
-          {/* Resize Handle */}
-          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-blue-500 transition-colors cursor-col-resize data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:h-1 data-[panel-group-direction=vertical]:cursor-row-resize" />
+          {/* Resize Handle - Material Honesty: Hairline Divider */}
+          <PanelResizeHandle
+            className="w-px cursor-col-resize data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:cursor-row-resize"
+            style={{ backgroundColor: 'var(--border-hair)' }}
+          />
 
-          {/* Output Panel */}
+          {/* Output Panel - Output Gallery */}
           <Panel defaultSize={50} minSize={20}>
-            <div className="h-full flex flex-col">
-              <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
-                <h2 className="text-sm font-medium text-gray-300">Output</h2>
+            <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--output-zone)' }}>
+              <div className="px-6 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-hair)' }}>
+                <h2 className="text-xs font-light tracking-wide" style={{ color: 'var(--text-whisper)' }}>
+                  OUTPUT
+                </h2>
               </div>
               <div className="flex-1 min-h-0">
                 <OutputPanel

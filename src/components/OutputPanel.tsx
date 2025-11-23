@@ -110,26 +110,26 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
   };
   if (loading || streaming) {
     return (
-      <div className="h-full bg-gray-900 flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-700">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-          <span className="text-sm text-gray-400">{streaming ? 'Streaming execution...' : 'Executing code...'}</span>
+      <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--output-zone)' }}>
+        <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid var(--border-hair)' }}>
+          <div className="animate-spin rounded-full h-4 w-4" style={{ borderBottom: '2px solid var(--accent-indigo)' }}></div>
+          <span className="text-sm" style={{ color: 'var(--text-whisper)' }}>{streaming ? 'Streaming execution...' : 'Executing code...'}</span>
         </div>
         {streaming && streamEvents && streamEvents.length > 0 && (
           <div className="flex-1 overflow-auto p-4">
             {streamEvents.map((event, index) => (
               <div key={index} className="mb-2">
-                <div className="text-xs text-gray-500 mb-1">
+                <div className="text-xs mb-1" style={{ color: 'var(--text-whisper)' }}>
                   [{event.type}] {new Date(event.timestamp).toLocaleTimeString()}
                 </div>
-                <pre className="text-gray-200 text-sm font-mono whitespace-pre-wrap">{event.message}</pre>
+                <pre className="text-sm font-mono whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{event.message}</pre>
               </div>
             ))}
           </div>
         )}
         {!streaming && !streamEvents?.length && (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-400">Executing code...</p>
+            <p style={{ color: 'var(--text-whisper)' }}>Executing code...</p>
           </div>
         )}
       </div>
@@ -138,10 +138,10 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
   if (error) {
     return (
-      <div className="h-full bg-gray-900 p-4 overflow-auto">
-        <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
-          <h3 className="text-red-400 font-semibold mb-2">Error</h3>
-          <pre className="text-red-300 text-sm whitespace-pre-wrap">{error}</pre>
+      <div className="h-full p-4 overflow-auto" style={{ backgroundColor: 'var(--output-zone)' }}>
+        <div className="rounded-lg p-4" style={{ backgroundColor: 'rgba(232, 69, 69, 0.1)', border: '1px solid var(--accent-crimson)' }}>
+          <h3 className="font-semibold mb-2" style={{ color: 'var(--accent-crimson)' }}>Error</h3>
+          <pre className="text-sm whitespace-pre-wrap" style={{ color: 'var(--accent-crimson)', opacity: 0.9 }}>{error}</pre>
         </div>
       </div>
     );
@@ -150,14 +150,23 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
   // Show completed stream events if available
   if (!output && streamEvents && streamEvents.length > 0) {
     return (
-      <div className="h-full bg-gray-900 flex flex-col">
-        <div className="border-b border-gray-700">
+      <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--output-zone)' }}>
+        <div style={{ borderBottom: '1px solid var(--border-hair)' }}>
           <div className="flex items-center justify-between px-4 py-2">
-            <span className="text-sm font-medium text-blue-400">✓ Execution Completed</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--accent-green)' }}>✓ Execution Completed</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleCopy}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                className="p-1.5 rounded transition-colors"
+                style={{ color: 'var(--text-whisper)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-whisper)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
                 title="Copy output"
                 aria-label="Copy output to clipboard"
               >
@@ -167,7 +176,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
               </button>
               <button
                 onClick={handleDownload}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                className="p-1.5 rounded transition-colors"
+                style={{ color: 'var(--text-whisper)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-whisper)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
                 title="Download output"
                 aria-label="Download output as text file"
               >
@@ -178,7 +196,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
               {onClear && (
                 <button
                   onClick={onClear}
-                  className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  className="p-1.5 rounded transition-colors"
+                  style={{ color: 'var(--text-whisper)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--text-whisper)';
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
                   title="Clear output"
                   aria-label="Clear output"
                 >
@@ -193,10 +220,10 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
         <div ref={outputRef} className="flex-1 overflow-auto p-4">
           {streamEvents.map((event, index) => (
             <div key={index} className="mb-2">
-              <div className="text-xs text-gray-500 mb-1">
+              <div className="text-xs mb-1" style={{ color: 'var(--text-whisper)' }}>
                 [{event.type}] {new Date(event.timestamp).toLocaleTimeString()}
               </div>
-              <pre className="text-gray-200 text-sm font-mono whitespace-pre-wrap">{event.message}</pre>
+              <pre className="text-sm font-mono whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{event.message}</pre>
             </div>
           ))}
         </div>
@@ -206,7 +233,7 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
   if (!output) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-900 text-gray-500">
+      <div className="h-full flex items-center justify-center" style={{ backgroundColor: 'var(--output-zone)', color: 'var(--text-whisper)' }}>
         <div className="text-center">
           <svg className="mx-auto h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
@@ -218,16 +245,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
   }
 
   return (
-    <div className="h-full bg-gray-900 flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Header with toolbar */}
-      <div className="border-b border-gray-700">
+      <div style={{ borderBottom: '1px solid var(--border-hair)' }}>
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-4">
-            <span className={`text-sm font-medium ${output.success ? 'text-green-400' : 'text-red-400'}`}>
+            <span className="text-sm font-medium" style={{ color: output.success ? 'var(--accent-green)' : 'var(--accent-crimson)' }}>
               {output.success ? '✓ Success' : '✗ Failed'}
             </span>
             {output.metrics && (
-              <div className="flex gap-4 text-xs text-gray-400">
+              <div className="flex gap-4 text-xs" style={{ color: 'var(--text-whisper)' }}>
                 {output.metrics.compile_time_ms > 0 && (
                   <span>Compile: {output.metrics.compile_time_ms}ms</span>
                 )}
@@ -241,7 +268,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+              className="p-1.5 rounded transition-colors"
+              style={{ color: 'var(--text-whisper)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-whisper)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               title="Search (Ctrl+F)"
               aria-label="Toggle search"
             >
@@ -252,7 +288,23 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
             <button
               onClick={() => setShowLineNumbers(!showLineNumbers)}
-              className={`p-1.5 rounded transition-colors ${showLineNumbers ? 'text-blue-400 bg-blue-900/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className="p-1.5 rounded transition-colors"
+              style={{
+                color: showLineNumbers ? 'var(--accent-indigo)' : 'var(--text-whisper)',
+                backgroundColor: showLineNumbers ? 'rgba(76, 95, 213, 0.1)' : 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                if (!showLineNumbers) {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showLineNumbers) {
+                  e.currentTarget.style.color = 'var(--text-whisper)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
               title="Toggle line numbers"
               aria-label="Toggle line numbers"
             >
@@ -263,7 +315,23 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
             <button
               onClick={() => setAutoScroll(!autoScroll)}
-              className={`p-1.5 rounded transition-colors ${autoScroll ? 'text-blue-400 bg-blue-900/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className="p-1.5 rounded transition-colors"
+              style={{
+                color: autoScroll ? 'var(--accent-indigo)' : 'var(--text-whisper)',
+                backgroundColor: autoScroll ? 'rgba(76, 95, 213, 0.1)' : 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                if (!autoScroll) {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!autoScroll) {
+                  e.currentTarget.style.color = 'var(--text-whisper)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
               title="Toggle auto-scroll"
               aria-label="Toggle auto-scroll"
             >
@@ -274,7 +342,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
             <button
               onClick={handleCopy}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+              className="p-1.5 rounded transition-colors"
+              style={{ color: 'var(--text-whisper)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-whisper)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               title="Copy output"
               aria-label="Copy output to clipboard"
             >
@@ -285,7 +362,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
 
             <button
               onClick={handleDownload}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+              className="p-1.5 rounded transition-colors"
+              style={{ color: 'var(--text-whisper)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-whisper)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               title="Download output"
               aria-label="Download output as text file"
             >
@@ -297,7 +383,16 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
             {onClear && (
               <button
                 onClick={onClear}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                className="p-1.5 rounded transition-colors"
+                style={{ color: 'var(--text-whisper)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--border-hair)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-whisper)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
                 title="Clear output"
                 aria-label="Clear output"
               >
@@ -317,7 +412,14 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search in output..."
-              className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-1.5 rounded text-sm focus:outline-none"
+              style={{
+                backgroundColor: 'var(--editor-zone)',
+                border: '1px solid var(--border-hair)',
+                color: 'var(--text-primary)'
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               autoFocus
             />
           </div>
@@ -327,11 +429,11 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
       {/* Output */}
       <div ref={outputRef} className="flex-1 overflow-auto p-4">
         {output.error ? (
-          <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-4">
-            <h3 className="text-red-400 font-semibold mb-2">{output.error.code}</h3>
-            <p className="text-red-300 text-sm mb-2">{output.error.message}</p>
+          <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: 'rgba(232, 69, 69, 0.1)', border: '1px solid var(--accent-crimson)' }}>
+            <h3 className="font-semibold mb-2" style={{ color: 'var(--accent-crimson)' }}>{output.error.code}</h3>
+            <p className="text-sm mb-2" style={{ color: 'var(--accent-crimson)', opacity: 0.9 }}>{output.error.message}</p>
             {output.error.details && (
-              <pre className="text-red-300/80 text-xs whitespace-pre-wrap">{output.error.details}</pre>
+              <pre className="text-xs whitespace-pre-wrap" style={{ color: 'var(--accent-crimson)', opacity: 0.8 }}>{output.error.details}</pre>
             )}
           </div>
         ) : null}
@@ -347,14 +449,14 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
           return (
             <div key={index} className="mb-2">
               {isCompile && (
-                <div className="text-blue-400 text-sm mb-1">
+                <div className="text-sm mb-1" style={{ color: 'var(--accent-indigo)' }}>
                   <span className="font-medium">Compilation:</span> <AnsiText>{event.message}</AnsiText>
                 </div>
               )}
               {isStdout && (
                 <div className="flex">
                   {showLineNumbers && (
-                    <div className="flex-shrink-0 pr-4 text-gray-600 text-sm font-mono select-none border-r border-gray-800 mr-4">
+                    <div className="flex-shrink-0 pr-4 text-sm font-mono select-none mr-4" style={{ color: 'var(--text-whisper)', borderRight: '1px solid var(--border-hair)' }}>
                       {lines.map((_, lineIdx) => (
                         <div key={lineIdx} className="text-right" style={{ minWidth: '2.5rem' }}>
                           {index + lineIdx + 1}
@@ -362,7 +464,7 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
                       ))}
                     </div>
                   )}
-                  <pre className="text-gray-200 text-sm font-mono whitespace-pre-wrap flex-1">
+                  <pre className="text-sm font-mono whitespace-pre-wrap flex-1" style={{ color: 'var(--text-primary)' }}>
                     <AnsiText>{event.message}</AnsiText>
                   </pre>
                 </div>
@@ -370,7 +472,7 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
               {isStderr && (
                 <div className="flex">
                   {showLineNumbers && (
-                    <div className="flex-shrink-0 pr-4 text-gray-600 text-sm font-mono select-none border-r border-gray-800 mr-4">
+                    <div className="flex-shrink-0 pr-4 text-sm font-mono select-none mr-4" style={{ color: 'var(--text-whisper)', borderRight: '1px solid var(--border-hair)' }}>
                       {lines.map((_, lineIdx) => (
                         <div key={lineIdx} className="text-right" style={{ minWidth: '2.5rem' }}>
                           {index + lineIdx + 1}
@@ -378,7 +480,7 @@ export default function OutputPanel({ output, loading, error, streaming, streamE
                       ))}
                     </div>
                   )}
-                  <pre className="text-red-400 text-sm font-mono whitespace-pre-wrap flex-1">
+                  <pre className="text-sm font-mono whitespace-pre-wrap flex-1" style={{ color: 'var(--accent-crimson)' }}>
                     <AnsiText>{event.message}</AnsiText>
                   </pre>
                 </div>

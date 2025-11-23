@@ -57,8 +57,6 @@ export default function SettingsModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const handleSave = () => {
     onSave(editorSettings, themeSettings);
     onClose();
@@ -69,19 +67,25 @@ export default function SettingsModal({
     setThemeSettings(DEFAULT_THEME_SETTINGS);
   };
 
+  if (!isOpen) return null;
+
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       role="dialog"
       aria-labelledby="settings-modal-title"
       aria-modal="true"
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--editor-zone)', border: '1px solid var(--border-hair)' }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 id="settings-modal-title" className="text-xl font-bold text-white">Settings</h2>
+          <h2 id="settings-modal-title" className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: 'var(--text-whisper)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-whisper)'}
             aria-label="Close settings modal"
           >
             ✕
@@ -90,11 +94,11 @@ export default function SettingsModal({
 
         {/* Editor Settings */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Editor Settings</h3>
+          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Editor Settings</h3>
           <div className="space-y-4">
             {/* Font Size */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Font Size: {editorSettings.font_size}px
               </label>
               <input
@@ -106,12 +110,15 @@ export default function SettingsModal({
                   setEditorSettings({ ...editorSettings, font_size: Number(e.target.value) })
                 }
                 className="w-full"
+                style={{
+                  accentColor: 'var(--accent-indigo)'
+                }}
               />
             </div>
 
             {/* Font Family */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Font Family
               </label>
               <select
@@ -119,7 +126,14 @@ export default function SettingsModal({
                 onChange={(e) =>
                   setEditorSettings({ ...editorSettings, font_family: e.target.value })
                 }
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-void)',
+                  border: '1px solid var(--border-hair)',
+                  color: 'var(--text-primary)'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               >
                 <option value="Fira Code, Monaco, monospace">Fira Code</option>
                 <option value="Monaco, monospace">Monaco</option>
@@ -131,7 +145,7 @@ export default function SettingsModal({
 
             {/* Tab Size */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Tab Size: {editorSettings.tab_size} spaces
               </label>
               <input
@@ -144,12 +158,15 @@ export default function SettingsModal({
                   setEditorSettings({ ...editorSettings, tab_size: Number(e.target.value) })
                 }
                 className="w-full"
+                style={{
+                  accentColor: 'var(--accent-indigo)'
+                }}
               />
             </div>
 
             {/* Auto Save */}
             <div className="flex items-center justify-between">
-              <label htmlFor="auto-save-toggle" className="text-sm font-medium text-gray-300">Auto Save</label>
+              <label htmlFor="auto-save-toggle" className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Auto Save</label>
               <button
                 id="auto-save-toggle"
                 onClick={() =>
@@ -158,21 +175,23 @@ export default function SettingsModal({
                 role="switch"
                 aria-checked={editorSettings.auto_save}
                 aria-label="Toggle auto save"
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  editorSettings.auto_save ? 'bg-blue-600' : 'bg-gray-700'
-                }`}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                style={{
+                  backgroundColor: editorSettings.auto_save ? 'var(--accent-indigo)' : 'var(--border-hair)'
+                }}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    editorSettings.auto_save ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  style={{
+                    transform: editorSettings.auto_save ? 'translateX(1.5rem)' : 'translateX(0.25rem)'
+                  }}
                 />
               </button>
             </div>
 
             {/* Minimap */}
             <div className="flex items-center justify-between">
-              <label htmlFor="minimap-toggle" className="text-sm font-medium text-gray-300">Show Minimap</label>
+              <label htmlFor="minimap-toggle" className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Show Minimap</label>
               <button
                 id="minimap-toggle"
                 onClick={() =>
@@ -181,21 +200,23 @@ export default function SettingsModal({
                 role="switch"
                 aria-checked={editorSettings.minimap}
                 aria-label="Toggle minimap display"
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  editorSettings.minimap ? 'bg-blue-600' : 'bg-gray-700'
-                }`}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                style={{
+                  backgroundColor: editorSettings.minimap ? 'var(--accent-indigo)' : 'var(--border-hair)'
+                }}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    editorSettings.minimap ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  style={{
+                    transform: editorSettings.minimap ? 'translateX(1.5rem)' : 'translateX(0.25rem)'
+                  }}
                 />
               </button>
             </div>
 
             {/* Execution Mode */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Execution Mode
               </label>
               <select
@@ -203,12 +224,19 @@ export default function SettingsModal({
                 onChange={(e) =>
                   setEditorSettings({ ...editorSettings, execution_mode: e.target.value as 'http' | 'websocket' })
                 }
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-void)',
+                  border: '1px solid var(--border-hair)',
+                  color: 'var(--text-primary)'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               >
                 <option value="http">HTTP (Recommended)</option>
                 <option value="websocket">WebSocket (Real-time)</option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text-whisper)' }}>
                 HTTP is more stable. WebSocket provides real-time streaming but may have connection issues.
               </p>
             </div>
@@ -217,15 +245,22 @@ export default function SettingsModal({
 
         {/* Theme Settings */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Theme Settings</h3>
+          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Theme Settings</h3>
           <div className="space-y-4">
             {/* Theme */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Theme</label>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Theme</label>
               <select
                 value={themeSettings.theme}
                 onChange={(e) => setThemeSettings({ ...themeSettings, theme: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-void)',
+                  border: '1px solid var(--border-hair)',
+                  color: 'var(--text-primary)'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               >
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
@@ -234,7 +269,7 @@ export default function SettingsModal({
 
             {/* Color Scheme */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Editor Color Scheme
               </label>
               <select
@@ -242,7 +277,14 @@ export default function SettingsModal({
                 onChange={(e) =>
                   setThemeSettings({ ...themeSettings, color_scheme: e.target.value })
                 }
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-void)',
+                  border: '1px solid var(--border-hair)',
+                  color: 'var(--text-primary)'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               >
                 <option value="vs-dark">VS Dark</option>
                 <option value="vs-light">VS Light</option>
@@ -257,7 +299,14 @@ export default function SettingsModal({
         <div className="flex gap-3">
           <button
             onClick={handleReset}
-            className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            style={{
+              color: 'var(--text-primary)',
+              backgroundColor: 'var(--bg-void)',
+              border: '1px solid var(--border-hair)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-void)'}
             aria-label="Reset all settings to default values"
           >
             Reset to Default
@@ -265,14 +314,27 @@ export default function SettingsModal({
           <div className="flex-1" />
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            style={{
+              color: 'var(--text-primary)',
+              backgroundColor: 'var(--bg-void)',
+              border: '1px solid var(--border-hair)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-void)'}
             aria-label="Cancel and close settings"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2 text-sm font-medium rounded-lg transition-colors"
+            style={{
+              backgroundColor: 'var(--accent-indigo)',
+              color: '#ffffff'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3d4daa'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-indigo)'}
             aria-label="Save settings and close"
           >
             Save Settings

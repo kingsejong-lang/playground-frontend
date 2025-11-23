@@ -44,6 +44,60 @@ const TEMPLATES: Record<string, TemplateInfo[]> = {
       description: '함수형 배열 메서드 예제 (걸러낸다, 변환한다, 축약한다)',
       languageId: 'kingsejong_v0_3',
     },
+    {
+      id: 'calculator',
+      name: '계산기',
+      description: '간단한 계산기 예제',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'classes',
+      name: '클래스',
+      description: '클래스 및 객체지향 프로그래밍 예제',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'async_await',
+      name: '비동기',
+      description: '비동기 프로그래밍 (async/await) 예제',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'array_demo',
+      name: '배열',
+      description: '배열 조작 및 메서드 예제',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'loops',
+      name: '반복문',
+      description: '반복문 (for/while) 예제',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_json',
+      name: 'JSON',
+      description: 'JSON 파싱 및 조작 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_time',
+      name: '시간/날짜',
+      description: '시간/날짜 처리 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_io',
+      name: '파일 I/O',
+      description: '파일 입출력 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_utils',
+      name: '유틸리티',
+      description: '유틸리티 함수 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
   ],
   python_3_12: [
     {

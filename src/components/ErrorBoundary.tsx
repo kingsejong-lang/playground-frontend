@@ -19,12 +19,13 @@ interface ErrorFallbackProps {
  */
 function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <div className="bg-red-900/20 border border-red-500 rounded-lg p-8 max-w-2xl w-full">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg-void)' }}>
+      <div className="rounded-lg p-8 max-w-2xl w-full" style={{ backgroundColor: 'rgba(232, 69, 69, 0.1)', border: '1px solid var(--accent-crimson)' }}>
         <div className="flex items-start gap-4 mb-6">
           <div className="flex-shrink-0">
             <svg
-              className="w-8 h-8 text-red-400"
+              className="w-8 h-8"
+              style={{ color: 'var(--accent-crimson)' }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -38,26 +39,26 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-red-400 mb-2">
+            <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--accent-crimson)' }}>
               Something went wrong
             </h2>
-            <p className="text-gray-300 mb-4">
+            <p className="mb-4" style={{ color: 'var(--text-primary)' }}>
               The application encountered an unexpected error. You can try reloading the page or contact support if the problem persists.
             </p>
           </div>
         </div>
 
         <div className="mb-6">
-          <details className="group">
-            <summary className="cursor-pointer text-sm font-medium text-gray-400 hover:text-gray-300 mb-2">
+          <details className="group" open>
+            <summary className="cursor-pointer text-sm font-medium mb-2" style={{ color: 'var(--text-whisper)' }}>
               Error Details
             </summary>
-            <div className="mt-2 p-4 bg-gray-950 rounded border border-gray-700">
-              <p className="text-sm font-semibold text-red-400 mb-2">
+            <div className="mt-2 p-4 rounded" style={{ backgroundColor: 'var(--bg-void)', border: '1px solid var(--border-hair)' }}>
+              <p className="text-sm font-semibold mb-2" style={{ color: 'var(--accent-crimson)' }}>
                 {error.name}: {error.message}
               </p>
               {error.stack && (
-                <pre className="text-xs text-gray-400 overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                <pre className="text-xs overflow-auto max-h-48 whitespace-pre-wrap break-words" style={{ color: 'var(--text-whisper)' }}>
                   {error.stack}
                 </pre>
               )}
@@ -68,13 +69,19 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
         <div className="flex gap-3">
           <button
             onClick={resetErrorBoundary}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 transition-colors rounded text-white font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+            className="px-4 py-2 rounded transition-colors font-medium focus:outline-none"
+            style={{ backgroundColor: 'var(--accent-crimson)', color: '#ffffff' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c13838'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-crimson)'}
           >
             Try Again
           </button>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 transition-colors rounded text-white font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+            className="px-4 py-2 rounded transition-colors font-medium focus:outline-none"
+            style={{ backgroundColor: 'var(--bg-void)', border: '1px solid var(--border-hair)', color: 'var(--text-primary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-hair)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-void)'}
           >
             Reload Page
           </button>

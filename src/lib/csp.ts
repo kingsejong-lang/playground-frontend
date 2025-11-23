@@ -58,6 +58,7 @@ export function getDevelopmentCSP(): CSPDirectives {
       "'self'",
       "'unsafe-inline'", // Required for Monaco Editor and Tailwind
       'https://cdn.jsdelivr.net', // Monaco Editor CDN styles
+      'https://fonts.googleapis.com', // Google Fonts
     ],
     'img-src': [
       "'self'",
@@ -68,11 +69,12 @@ export function getDevelopmentCSP(): CSPDirectives {
       "'self'",
       'data:', // Data URLs for fonts
       'https://cdn.jsdelivr.net', // Monaco Editor fonts
+      'https://fonts.gstatic.com', // Google Fonts
     ],
     'connect-src': [
       "'self'",
       'http://localhost:8080', // Backend API
-      'ws://localhost:3001', // Next.js HMR WebSocket
+      'ws://localhost:3000', // Next.js HMR WebSocket
       'ws://localhost:8080', // Backend WebSocket
       'wss://localhost:8080', // Backend WebSocket (if using wss)
       'https://cdn.jsdelivr.net', // Monaco Editor source maps
@@ -104,6 +106,7 @@ export function getProductionCSP(): CSPDirectives {
       "'self'",
       "'unsafe-inline'", // Monaco Editor and Tailwind require inline styles
       'https://cdn.jsdelivr.net', // Monaco Editor CDN styles
+      'https://fonts.googleapis.com', // Google Fonts
     ],
     'img-src': [
       "'self'",
@@ -114,6 +117,7 @@ export function getProductionCSP(): CSPDirectives {
       "'self'",
       'data:',
       'https://cdn.jsdelivr.net',
+      'https://fonts.gstatic.com', // Google Fonts
     ],
     'connect-src': [
       "'self'",

@@ -66,8 +66,11 @@ export default function FileTabs({
   };
 
   return (
-    <div className="flex items-center bg-gray-900 border-b border-gray-800 overflow-x-auto">
-      <div className="flex items-center">
+    <div
+      className="flex items-center overflow-x-auto px-4"
+      style={{ borderBottom: '1px solid var(--border-hair)' }}
+    >
+      <div className="flex items-center gap-2">
         {files.map((file) => {
           const isActive = file.id === activeFileId;
           const isRenaming = file.id === renamingFileId;
@@ -76,14 +79,11 @@ export default function FileTabs({
             <div
               key={file.id}
               onClick={() => !isRenaming && onSelectFile(file.id)}
-              className={`
-                group flex items-center gap-2 px-4 py-2 border-r border-gray-800 cursor-pointer
-                transition-colors min-w-[120px] max-w-[200px]
-                ${isActive
-                  ? 'bg-gray-800 text-white border-b-2 border-b-blue-500'
-                  : 'bg-gray-900 text-gray-400 hover:bg-gray-800 hover:text-gray-300'
-                }
-              `}
+              className="group flex items-center gap-2 px-4 py-2 cursor-pointer transition-colors text-xs"
+              style={{
+                color: isActive ? 'var(--text-primary)' : 'var(--text-whisper)',
+                backgroundColor: 'transparent',
+              }}
             >
               <span className="text-lg flex-shrink-0">{getFileIcon(file.name)}</span>
 
@@ -124,18 +124,6 @@ export default function FileTabs({
           );
         })}
       </div>
-
-      {/* Add file button */}
-      <button
-        onClick={onAddFile}
-        className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors flex-shrink-0"
-        aria-label="Add new file"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        <span className="text-sm">New File</span>
-      </button>
     </div>
   );
 }

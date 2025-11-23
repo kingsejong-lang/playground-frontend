@@ -123,22 +123,27 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
       role="dialog"
       aria-labelledby="shortcuts-title"
       aria-modal="true"
     >
       <div
-        className="bg-gray-800 rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        className="rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        style={{ backgroundColor: 'var(--editor-zone)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 id="shortcuts-title" className="text-2xl font-bold text-white">Keyboard Shortcuts</h2>
+        <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--border-hair)' }}>
+          <h2 id="shortcuts-title" className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Keyboard Shortcuts</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: 'var(--text-whisper)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-whisper)'}
             aria-label="Close shortcuts help"
           >
             <svg
@@ -161,17 +166,27 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
         <div className="p-6 space-y-6">
           {Object.entries(groupedShortcuts).map(([category, items]) => (
             <div key={category}>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-whisper)' }}>
                 {category}
               </h3>
               <div className="space-y-2">
                 {items.map((shortcut, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between py-2 px-3 rounded bg-gray-700/30 hover:bg-gray-700/50 transition-colors"
+                    className="flex items-center justify-between py-2 px-3 rounded transition-colors"
+                    style={{ backgroundColor: 'rgba(42, 42, 53, 0.3)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 42, 53, 0.5)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 42, 53, 0.3)'}
                   >
-                    <span className="text-gray-300">{shortcut.description}</span>
-                    <kbd className="px-3 py-1.5 text-sm font-mono font-semibold text-white bg-gray-700 border border-gray-600 rounded shadow-sm">
+                    <span style={{ color: 'var(--text-primary)' }}>{shortcut.description}</span>
+                    <kbd
+                      className="px-3 py-1.5 text-sm font-mono font-semibold rounded shadow-sm"
+                      style={{
+                        color: 'var(--text-primary)',
+                        backgroundColor: 'var(--bg-void)',
+                        border: '1px solid var(--border-hair)'
+                      }}
+                    >
                       {shortcut.keys}
                     </kbd>
                   </div>
@@ -182,9 +197,15 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-700">
-          <p className="text-sm text-gray-400 text-center">
-            Press <kbd className="px-2 py-1 text-xs font-mono bg-gray-700 border border-gray-600 rounded">?</kbd> to toggle this help
+        <div className="p-6" style={{ borderTop: '1px solid var(--border-hair)' }}>
+          <p className="text-sm text-center" style={{ color: 'var(--text-whisper)' }}>
+            Press <kbd
+              className="px-2 py-1 text-xs font-mono rounded"
+              style={{
+                backgroundColor: 'var(--bg-void)',
+                border: '1px solid var(--border-hair)'
+              }}
+            >?</kbd> to toggle this help
           </p>
         </div>
       </div>

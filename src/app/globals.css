@@ -2,29 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme variables */
+/* Code Sanctuary Theme - Korean dancheong + terminal aesthetics */
+/* Default: Dark Theme */
 :root {
-  /* Light theme colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f3f4f6;
-  --bg-tertiary: #e5e7eb;
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-tertiary: #6b7280;
-  --border-color: #d1d5db;
-  --accent-color: #3b82f6;
+  /* Code Sanctuary - Dark theme colors (default) */
+  --bg-void: #0a0a0e;
+  --bg-primary: #0a0a0e;
+  --editor-zone: #12121a;
+  --bg-secondary: #12121a;
+  --output-zone: #16161f;
+  --bg-tertiary: #16161f;
+  --border-hair: #2a2a35;
+  --border-color: #2a2a35;
+
+  /* Accent colors */
+  --accent-indigo: #4c5fd5;
+  --accent-color: #4c5fd5;
+  --accent-green: #3fb68b;
+  --accent-crimson: #e84545;
+
+  /* Text colors */
+  --text-primary: #e4e4e7;
+  --text-whisper: #6e7191;
+  --text-secondary: #6e7191;
+  --text-tertiary: #6e7191;
 }
 
+/* Light theme override */
+:root.light {
+  /* Light theme colors */
+  --bg-void: #f9fafb;
+  --bg-primary: #ffffff;
+  --editor-zone: #f9fafb;
+  --bg-secondary: #f3f4f6;
+  --output-zone: #f3f4f6;
+  --bg-tertiary: #e5e7eb;
+  --border-hair: #d1d5db;
+  --border-color: #d1d5db;
+
+  /* Accent colors (same for light) */
+  --accent-indigo: #4c5fd5;
+  --accent-color: #4c5fd5;
+  --accent-green: #3fb68b;
+  --accent-crimson: #e84545;
+
+  /* Text colors */
+  --text-primary: #111827;
+  --text-whisper: #6b7280;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+}
+
+/* Ensure dark theme is explicitly defined */
 :root.dark {
-  /* Dark theme colors */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #1f2937;
-  --bg-tertiary: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-tertiary: #9ca3af;
-  --border-color: #4b5563;
-  --accent-color: #3b82f6;
+  /* Code Sanctuary - Dark theme colors */
+  --bg-void: #0a0a0e;
+  --bg-primary: #0a0a0e;
+  --editor-zone: #12121a;
+  --bg-secondary: #12121a;
+  --output-zone: #16161f;
+  --bg-tertiary: #16161f;
+  --border-hair: #2a2a35;
+  --border-color: #2a2a35;
+
+  /* Accent colors */
+  --accent-indigo: #4c5fd5;
+  --accent-color: #4c5fd5;
+  --accent-green: #3fb68b;
+  --accent-crimson: #e84545;
+
+  /* Text colors */
+  --text-primary: #e4e4e7;
+  --text-whisper: #6e7191;
+  --text-secondary: #6e7191;
+  --text-tertiary: #6e7191;
 }
 
 * {
@@ -45,35 +96,40 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+code, pre {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
 
 /* Enhanced focus indicators for accessibility */
 @layer base {
   /* Visible focus ring for keyboard navigation */
   *:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-950;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-indigo);
   }
 
   /* Special focus styles for buttons */
   button:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-950;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-indigo);
   }
 
   /* Special focus styles for inputs and selects */
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-1 ring-offset-gray-900;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-indigo);
   }
 
   /* Focus styles for links */
   a:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-950;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-indigo);
   }
 }
 
@@ -118,7 +174,9 @@ code {
 
   /* Skip navigation link */
   .skip-link {
-    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg;
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg;
+    background-color: var(--accent-indigo);
+    color: white;
   }
 
   /* Reduced motion support */

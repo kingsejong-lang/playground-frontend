@@ -19,8 +19,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
   const { login, register } = useAuth();
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -70,21 +68,27 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  if (!isOpen) return null;
+
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       role="dialog"
       aria-labelledby="auth-modal-title"
       aria-modal="true"
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="rounded-lg p-6 max-w-md w-full mx-4" style={{ backgroundColor: 'var(--editor-zone)', border: '1px solid var(--border-hair)' }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 id="auth-modal-title" className="text-2xl font-bold text-white">
+          <h2 id="auth-modal-title" className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             {mode === 'login' ? 'Login' : 'Sign Up'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: 'var(--text-whisper)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-whisper)'}
             aria-label="Close authentication modal"
           >
             ✕
@@ -94,7 +98,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                 Name
               </label>
               <input
@@ -102,7 +106,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 rounded-lg focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-void)',
+                  border: '1px solid var(--border-hair)',
+                  color: 'var(--text-primary)'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
                 required={mode === 'register'}
                 disabled={loading}
               />
@@ -110,7 +121,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               Email
             </label>
             <input
@@ -118,14 +129,21 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-2 rounded-lg focus:outline-none"
+              style={{
+                backgroundColor: 'var(--bg-void)',
+                border: '1px solid var(--border-hair)',
+                color: 'var(--text-primary)'
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               required
               disabled={loading}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               Password
             </label>
             <input
@@ -133,7 +151,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-2 rounded-lg focus:outline-none"
+              style={{
+                backgroundColor: 'var(--bg-void)',
+                border: '1px solid var(--border-hair)',
+                color: 'var(--text-primary)'
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
               required
               minLength={6}
               disabled={loading}
@@ -141,15 +166,22 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
           </div>
 
           {error && (
-            <div className="bg-red-900/20 border border-red-500 rounded-lg p-3" role="alert">
-              <p className="text-red-300 text-sm">{error}</p>
+            <div className="rounded-lg p-3" style={{ backgroundColor: 'rgba(232, 69, 69, 0.1)', border: '1px solid var(--accent-crimson)' }} role="alert">
+              <p className="text-sm" style={{ color: 'var(--accent-crimson)' }}>{error}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors font-medium"
+            className="w-full px-4 py-2 rounded-lg transition-colors font-medium disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: loading ? 'var(--border-hair)' : 'var(--accent-indigo)',
+              color: '#ffffff',
+              opacity: loading ? 0.5 : 1
+            }}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#3d4daa')}
+            onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--accent-indigo)')}
             aria-busy={loading}
           >
             {loading ? 'Processing...' : mode === 'login' ? 'Login' : 'Sign Up'}
@@ -159,7 +191,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         <div className="mt-4 text-center">
           <button
             onClick={toggleMode}
-            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-sm transition-colors"
+            style={{ color: 'var(--accent-indigo)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#3d4daa'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--accent-indigo)'}
             aria-label={mode === 'login' ? "Switch to sign up form" : "Switch to login form"}
           >
             {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Login'}

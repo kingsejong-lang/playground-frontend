@@ -14,7 +14,14 @@ export default function LanguageSelector({ languages, selectedLanguage, onSelect
       id="language-select"
       value={selectedLanguage}
       onChange={(e) => onSelect(e.target.value)}
-      className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
+      className="text-sm rounded-lg px-3 py-2 focus:outline-none"
+      style={{
+        backgroundColor: 'var(--bg-void)',
+        border: '1px solid var(--border-hair)',
+        color: 'var(--text-primary)'
+      }}
+      onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-indigo)'}
+      onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-hair)'}
       aria-label="Select programming language"
     >
       {languages.map((lang) => (

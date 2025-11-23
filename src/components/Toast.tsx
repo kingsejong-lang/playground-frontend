@@ -22,10 +22,10 @@ export function Toast({ id, type, message, duration = 5000, onClose }: ToastProp
   }, [onClose, duration])
 
   const colors = {
-    success: 'bg-green-600 border-green-500',
-    error: 'bg-red-600 border-red-500',
-    warning: 'bg-yellow-600 border-yellow-500',
-    info: 'bg-blue-600 border-blue-500',
+    success: { bg: 'rgba(63, 182, 139, 0.15)', border: 'var(--accent-green)' },
+    error: { bg: 'rgba(232, 69, 69, 0.15)', border: 'var(--accent-crimson)' },
+    warning: { bg: 'rgba(255, 193, 7, 0.15)', border: '#ffc107' },
+    info: { bg: 'rgba(76, 95, 213, 0.15)', border: 'var(--accent-indigo)' },
   }
 
   const icons = {
@@ -37,18 +37,28 @@ export function Toast({ id, type, message, duration = 5000, onClose }: ToastProp
 
   return (
     <div
-      className={`${colors[type]} border rounded-lg p-4 shadow-lg mb-2 animate-slide-in-right min-w-[320px] max-w-md`}
+      className="border rounded-lg p-4 shadow-lg mb-2 animate-slide-in-right min-w-[320px] max-w-md"
+      style={{
+        backgroundColor: colors[type].bg,
+        borderColor: colors[type].border,
+      }}
       role="alert"
       aria-live="polite"
     >
       <div className="flex items-start gap-3">
-        <span className="text-white text-xl font-bold flex-shrink-0">
+        <span
+          className="text-xl font-bold flex-shrink-0"
+          style={{ color: colors[type].border }}
+        >
           {icons[type]}
         </span>
-        <p className="text-white text-sm flex-1 break-words">{message}</p>
+        <p className="text-sm flex-1 break-words" style={{ color: 'var(--text-primary)' }}>{message}</p>
         <button
           onClick={onClose}
-          className="text-white hover:text-gray-200 transition-colors ml-2 flex-shrink-0"
+          className="transition-colors ml-2 flex-shrink-0"
+          style={{ color: 'var(--text-whisper)' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-whisper)'}
           aria-label="Close notification"
         >
           ✕
