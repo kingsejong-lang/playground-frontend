@@ -1,101 +1,63 @@
+/**
+ * API Client
+ * Centralized API communication with CSRF protection and token refresh.
+ */
+
 import axios from 'axios';
+import { getCsrfToken, clearCsrfCache, requiresCsrf } from '@/lib/csrf';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true, // Enable httpOnly cookies
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
-// CSRF token cache
-let csrfToken: string | null = null;
-let csrfExpiresAt: number = 0;
+// Re-export CSRF functions for backward compatibility
+export { getCsrfToken, clearCsrfCache };
 
-// Get CSRF token (with caching)
-export async function getCsrfToken(): Promise<string> {
-  // Return cached token if still valid
-  if (csrfToken && Date.now() < csrfExpiresAt) {
-    return csrfToken;
-  }
-
-  try {
-    const response = await axios.get(`${API_URL}/api/v1/csrf/token`, {
-      withCredentials: true,
-    });
-    const token = response.data.csrf_token;
-    if (!token) {
-      throw new Error('CSRF token not found in response');
-    }
-    csrfToken = token;
-    // Cache for 5 minutes (same as backend)
-    csrfExpiresAt = Date.now() + 5 * 60 * 1000;
-    return token;
-  } catch (error) {
-    console.error('Failed to get CSRF token:', error);
-    throw error;
-  }
-}
-
-// Clear CSRF token cache
-export function clearCsrfCache() {
-  csrfToken = null;
-  csrfExpiresAt = 0;
-}
-
-// Add request interceptor to include CSRF token for state-changing requests
+// Request interceptor: Add CSRF token for state-changing requests
 api.interceptors.request.use(
   async (config) => {
-    // Add CSRF token for POST, PUT, DELETE, PATCH requests
-    if (config.method && ['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())) {
+    if (config.method && requiresCsrf(config.method)) {
       try {
-        const token = await getCsrfToken();
-        config.headers['X-CSRF-Token'] = token;
+        config.headers['X-CSRF-Token'] = await getCsrfToken();
       } catch (error) {
         console.error('Failed to add CSRF token:', error);
       }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add response interceptor for automatic token refresh and CSRF retry
+// Response interceptor: Handle token refresh and CSRF retry
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 (Unauthorized), try to refresh token
+    // 401 Unauthorized: Try token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        // Refresh endpoint will automatically use refresh_token from httpOnly cookie
         await axios.post(`${API_URL}/api/v1/auth/refresh`, {}, { withCredentials: true });
-        // Retry original request
         return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, user needs to login again
-        return Promise.reject(refreshError);
+      } catch {
+        return Promise.reject(error);
       }
     }
 
-    // If 403 (Forbidden) and CSRF-related, get new token and retry
+    // 403 Forbidden: Try CSRF token refresh
     if (error.response?.status === 403 && !originalRequest._csrfRetry) {
       originalRequest._csrfRetry = true;
       try {
-        // Clear cached CSRF token and get a new one
         clearCsrfCache();
-        const token = await getCsrfToken();
-        originalRequest.headers['X-CSRF-Token'] = token;
-        // Retry original request
+        originalRequest.headers['X-CSRF-Token'] = await getCsrfToken();
         return api(originalRequest);
-      } catch (csrfError) {
-        return Promise.reject(csrfError);
+      } catch {
+        return Promise.reject(error);
       }
     }
 

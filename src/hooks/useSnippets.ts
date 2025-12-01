@@ -11,10 +11,9 @@ import {
   sanitizeSnippetTitle,
   sanitizeSnippetTags,
   validateCodeSize,
-  escapeHTML,
 } from '@/lib/security/sanitize';
-
-const STORAGE_KEY = 'kingsejong-snippets';
+import { STORAGE_KEYS, EDITOR_LIMITS } from '@/lib/constants';
+import { generateId } from '@/lib/utils/string';
 
 interface UseSnippetsReturn {
   snippets: Snippet[];
@@ -34,20 +33,13 @@ interface UseSnippetsReturn {
 }
 
 /**
- * Generate unique ID
- */
-function generateId(): string {
-  return `snippet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
  * Load snippets from localStorage
  */
 function loadSnippets(): Snippet[] {
   if (typeof window === 'undefined') return [];
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.SNIPPETS);
     if (stored) {
       return JSON.parse(stored);
     }
@@ -65,7 +57,7 @@ function saveSnippets(snippets: Snippet[]) {
   if (typeof window === 'undefined') return;
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(snippets));
+    localStorage.setItem(STORAGE_KEYS.SNIPPETS, JSON.stringify(snippets));
   } catch (error) {
     console.error('Failed to save snippets:', error);
   }
@@ -99,9 +91,9 @@ export function useSnippets(): UseSnippetsReturn {
       throw new Error('Snippet code is required');
     }
 
-    // Validate code size (max 500KB)
-    if (!validateCodeSize(snippet.code, 500)) {
-      throw new Error('Snippet code is too large (max 500KB)');
+    // Validate code size
+    if (!validateCodeSize(snippet.code, EDITOR_LIMITS.CODE_MAX_SIZE_KB)) {
+      throw new Error(`Snippet code is too large (max ${EDITOR_LIMITS.CODE_MAX_SIZE_KB}KB)`);
     }
 
     const newSnippet: Snippet = {
@@ -109,7 +101,7 @@ export function useSnippets(): UseSnippetsReturn {
       title: sanitizedTitle,
       description: sanitizedDescription,
       tags: sanitizedTags,
-      id: generateId(),
+      id: generateId('snippet'),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };

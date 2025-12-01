@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react'
+const { renderHook, act } = require('@testing-library/react')
 import { useFiles, getFileExtension, getFileIcon } from '../useFiles'
 
 describe('useFiles', () => {
@@ -7,7 +7,7 @@ describe('useFiles', () => {
       const { result } = renderHook(() => useFiles())
 
       expect(result.current.files).toHaveLength(1)
-      expect(result.current.files[0].name).toBe('main.ks')
+      expect(result.current.files[0].name).toBe('main.ksj')
       expect(result.current.files[0].content).toBe('')
       expect(result.current.activeFileId).toBe(result.current.files[0].id)
       expect(result.current.activeFile).toEqual(result.current.files[0])
@@ -108,7 +108,7 @@ describe('useFiles', () => {
       })
 
       expect(result.current.files).toHaveLength(1)
-      expect(result.current.files[0].name).toBe('main.ks')
+      expect(result.current.files[0].name).toBe('main.ksj')
       expect(result.current.files[0].content).toBe('')
       expect(result.current.activeFileId).toBe(result.current.files[0].id)
     })
@@ -142,7 +142,7 @@ describe('useFiles', () => {
         result.current.renameFile(fileToRename.id, 'renamed.py')
       })
 
-      expect(result.current.files[0].name).toBe('main.ks')
+      expect(result.current.files[0].name).toBe('main.ksj')
       expect(result.current.files[1].name).toBe('renamed.py')
       expect(result.current.files[2].name).toBe('test2.py')
     })
@@ -203,7 +203,7 @@ describe('useFiles', () => {
 
   describe('getFilesObject', () => {
     it('should return files as object with filename keys', () => {
-      const { result } = renderHook(() => useFiles('main.ks', 'content1'))
+      const { result } = renderHook(() => useFiles('main.ksj', 'content1'))
 
       act(() => {
         result.current.addFile('test.py', 'content2')
@@ -212,13 +212,13 @@ describe('useFiles', () => {
       const filesObject = result.current.getFilesObject()
 
       expect(filesObject).toEqual({
-        'main.ks': 'content1',
+        'main.ksj': 'content1',
         'test.py': 'content2',
       })
     })
 
     it('should return empty object for no files', () => {
-      const { result } = renderHook(() => useFiles('main.ks', ''))
+      const { result } = renderHook(() => useFiles('main.ksj', ''))
 
       act(() => {
         result.current.deleteFile(result.current.files[0].id)
@@ -232,7 +232,7 @@ describe('useFiles', () => {
 
       const filesObject = result.current.getFilesObject()
 
-      expect(filesObject['main.ks']).toBe('')
+      expect(filesObject['main.ksj']).toBe('')
     })
   })
 
@@ -327,7 +327,7 @@ describe('useFiles', () => {
       })
 
       expect(result.current.files).toHaveLength(1)
-      expect(result.current.files[0].name).toBe('main.ks')
+      expect(result.current.files[0].name).toBe('main.ksj')
       expect(result.current.files[0].content).toBe('')
       expect(result.current.activeFileId).toBe(result.current.files[0].id)
     })
@@ -337,7 +337,7 @@ describe('useFiles', () => {
     it('should extract file extension', () => {
       expect(getFileExtension('test.py')).toBe('py')
       expect(getFileExtension('script.js')).toBe('js')
-      expect(getFileExtension('main.ks')).toBe('ks')
+      expect(getFileExtension('main.ksj')).toBe('ksj')
     })
 
     it('should handle multiple dots', () => {
@@ -355,7 +355,7 @@ describe('useFiles', () => {
 
   describe('getFileIcon', () => {
     it('should return correct icon for known extensions', () => {
-      expect(getFileIcon('main.ks')).toBe('👑')
+      expect(getFileIcon('main.ksj')).toBe('👑')
       expect(getFileIcon('script.py')).toBe('🐍')
       expect(getFileIcon('app.js')).toBe('📜')
       expect(getFileIcon('component.tsx')).toBe('⚛️')

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+const { renderHook, waitFor } = require('@testing-library/react')
 import { useLanguages } from '../useLanguages'
 import * as api from '@/lib/api'
 

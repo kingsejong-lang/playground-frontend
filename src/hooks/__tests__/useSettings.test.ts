@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+const { renderHook, waitFor } = require('@testing-library/react')
 import { useSettings } from '../useSettings'
 import * as api from '@/lib/api'
 
@@ -30,6 +30,7 @@ const DEFAULT_EDITOR_SETTINGS = {
   tab_size: 2,
   auto_save: false,
   minimap: true,
+  execution_mode: 'http',
 }
 
 const DEFAULT_THEME_SETTINGS = {

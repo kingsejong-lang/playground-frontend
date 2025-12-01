@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+const { renderHook, act } = require('@testing-library/react');
 import { useLayout } from '../useLayout';
 
 describe('useLayout', () => {

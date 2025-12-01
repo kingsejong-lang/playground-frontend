@@ -10,9 +10,10 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
-    // Handle module aliases (this will be automatically configured for you soon)
+    // Handle module aliases
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  moduleDirectories: ['node_modules', '<rootDir>/'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
@@ -38,6 +39,7 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
+    '/tests/e2e/',  // Playwright E2E tests
   ],
 }
 

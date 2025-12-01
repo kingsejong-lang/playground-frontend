@@ -8,6 +8,7 @@ import { executionAPI, ExecuteResponse, Language } from '@/lib/api';
 import { extractErrorMessage } from '@/lib/guards';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { ExecutionEvent as WSExecutionEvent } from '@/lib/websocket/protocol';
+import { resolveLanguage, getMainFilename } from '@/lib/utils/language';
 
 interface ExecutionEvent {
   type: string;
@@ -84,22 +85,17 @@ export function useCodeExecution(options?: UseCodeExecutionOptions): UseCodeExec
     setError(null);
 
     try {
-      const lang = languages.find(l => l.id === language);
+      const lang = resolveLanguage(language, languages);
       if (!lang) {
         setError('Language not found');
         setLoading(false);
         return;
       }
 
-      // Determine filename based on language
-      const extension = lang.extensions[0] || '.txt';
-      const filename = `main${extension}`;
-
+      const filename = getMainFilename(lang);
       const result = await executionAPI.execute({
         language,
-        files: {
-          [filename]: code,
-        },
+        files: { [filename]: code },
       });
 
       setOutput(result);
@@ -121,7 +117,7 @@ export function useCodeExecution(options?: UseCodeExecutionOptions): UseCodeExec
       return;
     }
 
-    const lang = languages.find(l => l.id === language);
+    const lang = resolveLanguage(language, languages);
     if (!lang) {
       setError('Language not found');
       return;
@@ -132,33 +128,24 @@ export function useCodeExecution(options?: UseCodeExecutionOptions): UseCodeExec
     setOutput(null);
     setError(null);
 
-    const extension = lang.extensions[0] || '.txt';
-    const filename = `main${extension}`;
-
-    // Import SSEClient dynamically
+    const filename = getMainFilename(lang);
     const { SSEClient } = await import('@/lib/sse-client');
 
     const client = new SSEClient({
       url: '/api/v1/execute/stream',
       requestBody: {
         language,
-        files: {
-          [filename]: code,
-        },
+        files: { [filename]: code },
       },
       maxRetries: 3,
       initialRetryDelay: 1000,
       maxRetryDelay: 10000,
-      onEvent: (event) => {
-        setStreamEvents((prev) => [...prev, event]);
-      },
+      onEvent: (event) => setStreamEvents((prev) => [...prev, event]),
       onError: (err) => {
         console.error('SSE error:', err);
         setError(err.message);
       },
-      onComplete: () => {
-        setStreaming(false);
-      },
+      onComplete: () => setStreaming(false),
     });
 
     await client.connect();
@@ -185,22 +172,17 @@ export function useCodeExecution(options?: UseCodeExecutionOptions): UseCodeExec
     setError(null);
 
     try {
-      const lang = languages.find(l => l.id === language);
+      const lang = resolveLanguage(language, languages);
       if (!lang) {
         setError('Language not found');
         setStreaming(false);
         return;
       }
 
-      const extension = lang.extensions[0] || '.txt';
-      const filename = `main${extension}`;
-
-      // Execute via WebSocket
+      const filename = getMainFilename(lang);
       const requestId = await wsExecute({
         language,
-        files: {
-          [filename]: code,
-        },
+        files: { [filename]: code },
       });
 
       if (!requestId) {

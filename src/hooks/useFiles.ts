@@ -3,6 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { generateId } from '@/lib/utils/string';
 
 export interface FileItem {
   id: string;
@@ -31,7 +32,7 @@ export interface UseFilesReturn {
 export function useFiles(initialFileName: string = 'main.ksj', initialContent: string = ''): UseFilesReturn {
   const [files, setFiles] = useState<FileItem[]>([
     {
-      id: generateFileId(),
+      id: generateId('file'),
       name: initialFileName,
       content: initialContent,
     },
@@ -44,7 +45,7 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
   // Add new file
   const addFile = useCallback((name: string, content: string = '') => {
     const newFile: FileItem = {
-      id: generateFileId(),
+      id: generateId('file'),
       name,
       content,
     };
@@ -61,7 +62,7 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
       // If no files left, create a default file
       if (filtered.length === 0) {
         const defaultFile: FileItem = {
-          id: generateFileId(),
+          id: generateId('file'),
           name: 'main.ksj',
           content: '',
         };
@@ -109,7 +110,7 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
   // Load files from object
   const loadFiles = useCallback((filesObject: Record<string, string>) => {
     const newFiles: FileItem[] = Object.entries(filesObject).map(([name, content]) => ({
-      id: generateFileId(),
+      id: generateId('file'),
       name,
       content,
     }));
@@ -123,7 +124,7 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
   // Clear all files
   const clearFiles = useCallback(() => {
     const defaultFile: FileItem = {
-      id: generateFileId(),
+      id: generateId('file'),
       name: 'main.ksj',
       content: '',
     };
@@ -147,14 +148,42 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
 }
 
 /**
- * Generate unique file ID
+ * File icon mapping by extension
  */
-function generateFileId(): string {
-  return `file_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
+const FILE_ICONS: Record<string, string> = {
+  // Kingsejong
+  ks: '👑',
+  ksj: '👑',
+  // Python
+  py: '🐍',
+  pyw: '🐍',
+  // JavaScript/TypeScript
+  js: '📜',
+  jsx: '⚛️',
+  ts: '📘',
+  tsx: '⚛️',
+  // Go
+  go: '🔵',
+  // C/C++
+  c: '©️',
+  cpp: '©️',
+  h: '©️',
+  hpp: '©️',
+  // Rust
+  rs: '🦀',
+  // Java
+  java: '☕',
+  // Other
+  txt: '📄',
+  md: '📝',
+  json: '{}',
+  xml: '🏷️',
+  html: '🌐',
+  css: '🎨',
+};
 
 /**
- * Get file extension
+ * Get file extension from filename
  */
 export function getFileExtension(filename: string): string {
   const parts = filename.split('.');
@@ -166,38 +195,5 @@ export function getFileExtension(filename: string): string {
  */
 export function getFileIcon(filename: string): string {
   const ext = getFileExtension(filename).toLowerCase();
-
-  const iconMap: Record<string, string> = {
-    // Kingsejong
-    'ks': '👑',
-    'ksj': '👑',
-    // Python
-    'py': '🐍',
-    'pyw': '🐍',
-    // JavaScript/TypeScript
-    'js': '📜',
-    'jsx': '⚛️',
-    'ts': '📘',
-    'tsx': '⚛️',
-    // Go
-    'go': '🔵',
-    // C/C++
-    'c': '©️',
-    'cpp': '©️',
-    'h': '©️',
-    'hpp': '©️',
-    // Rust
-    'rs': '🦀',
-    // Java
-    'java': '☕',
-    // Other
-    'txt': '📄',
-    'md': '📝',
-    'json': '{}',
-    'xml': '🏷️',
-    'html': '🌐',
-    'css': '🎨',
-  };
-
-  return iconMap[ext] || '📄';
+  return FILE_ICONS[ext] || '📄';
 }

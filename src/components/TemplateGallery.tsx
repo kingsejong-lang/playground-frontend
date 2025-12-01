@@ -98,6 +98,30 @@ const TEMPLATES: Record<string, TemplateInfo[]> = {
       description: '유틸리티 함수 (stdlib)',
       languageId: 'kingsejong_v0_3',
     },
+    {
+      id: 'stdlib_http',
+      name: 'HTTP',
+      description: 'HTTP 요청 및 API 호출 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_db',
+      name: '데이터베이스',
+      description: 'SQLite 데이터베이스 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_regex',
+      name: '정규표현식',
+      description: '정규표현식 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
+    {
+      id: 'stdlib_crypto',
+      name: '암호화',
+      description: '암호화 및 해싱 (stdlib)',
+      languageId: 'kingsejong_v0_3',
+    },
   ],
   python_3_12: [
     {

@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -16,8 +17,6 @@ interface UseThemeReturn {
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
 }
-
-const STORAGE_KEY = 'kingsejong-theme';
 
 /**
  * Get system theme preference
@@ -33,7 +32,7 @@ function getSystemTheme(): ResolvedTheme {
 function getStoredTheme(): Theme {
   if (typeof window === 'undefined') return 'system';
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.THEME);
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       return stored;
     }
@@ -105,7 +104,7 @@ export function useTheme(): UseThemeReturn {
     applyTheme(resolved);
 
     try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
+      localStorage.setItem(STORAGE_KEYS.THEME, newTheme);
     } catch (e) {
       console.error('Failed to save theme to localStorage:', e);
     }

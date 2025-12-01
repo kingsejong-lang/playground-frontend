@@ -5,6 +5,9 @@ import { useHistory } from '@/hooks/useHistory';
 import { HistoryItem } from '@/lib/history';
 import { useToast } from '@/hooks/useToast';
 import { Language } from '@/lib/api';
+import { formatRelativeTime } from '@/lib/utils/time';
+import { truncateCode } from '@/lib/utils/string';
+import { getLanguageName } from '@/lib/utils/language';
 
 interface HistorySidebarProps {
   isOpen: boolean;
@@ -77,37 +80,6 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-
-    // Less than 1 minute
-    if (diff < 60000) {
-      return 'Just now';
-    }
-
-    // Less than 1 hour
-    if (diff < 3600000) {
-      const minutes = Math.floor(diff / 60000);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    }
-
-    // Less than 1 day
-    if (diff < 86400000) {
-      const hours = Math.floor(diff / 3600000);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    }
-
-    // More than 1 day
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-  };
-
-  const truncateCode = (code: string, maxLength: number = 50) => {
-    if (code.length <= maxLength) return code;
-    return code.substring(0, maxLength) + '...';
   };
 
   if (!isOpen) return null;
@@ -251,7 +223,7 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
                         <span className="text-red-400 text-lg">✗</span>
                       )}
                       <span className="text-sm font-medium text-white">
-                        {languages.find(l => l.id === item.language)?.name || item.language}
+                        {getLanguageName(item.language, languages)}
                       </span>
                     </div>
                     <button
@@ -270,7 +242,7 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{formatTimestamp(item.timestamp)}</span>
+                    <span>{formatRelativeTime(item.timestamp)}</span>
                     <span>{item.output.metrics ? `${item.output.metrics.run_time_ms}ms` : ''}</span>
                   </div>
                 </div>

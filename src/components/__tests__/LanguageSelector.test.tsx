@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+const { render, screen, fireEvent } = require('@testing-library/react');
 import LanguageSelector from '../LanguageSelector';
 import { Language } from '@/lib/api';
 

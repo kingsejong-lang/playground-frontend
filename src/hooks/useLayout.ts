@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 export type LayoutOrientation = 'horizontal' | 'vertical';
 
@@ -25,8 +26,6 @@ interface UseLayoutReturn {
   resetLayout: () => void;
 }
 
-const STORAGE_KEY = 'kingsejong-layout';
-
 const DEFAULT_SETTINGS: LayoutSettings = {
   orientation: 'horizontal',
   editorSize: 50,
@@ -40,7 +39,7 @@ function getStoredLayout(): LayoutSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.LAYOUT);
     if (stored) {
       const parsed = JSON.parse(stored);
       return {
@@ -63,7 +62,7 @@ function saveLayout(settings: LayoutSettings) {
   if (typeof window === 'undefined') return;
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEYS.LAYOUT, JSON.stringify(settings));
   } catch (e) {
     console.error('Failed to save layout to localStorage:', e);
   }

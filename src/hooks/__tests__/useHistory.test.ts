@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react'
+const { renderHook, act, waitFor } = require('@testing-library/react')
 import { useHistory } from '../useHistory'
 import * as historyLib from '@/lib/history'
 
