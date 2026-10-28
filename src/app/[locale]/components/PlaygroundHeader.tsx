@@ -24,6 +24,7 @@ import {
   Menu,
   Moon,
   Play,
+  Save,
   Settings,
   Share2,
   Square,
@@ -57,6 +58,7 @@ interface PlaygroundHeaderProps {
   onOpenHistory: () => void;
   onToggleFileTree: () => void;
   onFormat: () => void;
+  onSaveDraft: () => void;
   onOpenShortcuts: () => void;
   onShare: () => void;
   sharing: boolean;
@@ -87,6 +89,7 @@ export function PlaygroundHeader({
   onOpenHistory,
   onToggleFileTree,
   onFormat,
+  onSaveDraft,
   onOpenShortcuts,
   onShare,
   sharing,
@@ -182,9 +185,10 @@ export function PlaygroundHeader({
           <MenuItem icon={<Share2 />} label={sharing ? t('header.sharing') : t('header.share')} onClick={fromMenu(onShare)} disabled={sharing} />
           <MenuDivider />
         </div>
-        <MenuItem icon={<BookMarked />} label={t('snippets.title')} hint={[runKeys[0], 'L']} onClick={fromMenu(onOpenSnippets)} />
-        <MenuItem icon={<FolderTree />} label={t('files.toggleTree')} hint={[runKeys[0], 'F']} onClick={fromMenu(onToggleFileTree)} />
-        <MenuItem icon={<WandSparkles />} label={t('shortcuts.format')} hint={[runKeys[0], 'Shift', 'F']} onClick={fromMenu(onFormat)} />
+        <MenuItem icon={<Save />} label={t('header.saveDraft')} hint={[runKeys[0], 'S']} onClick={fromMenu(onSaveDraft)} />
+        <MenuItem icon={<BookMarked />} label={t('snippets.title')} onClick={fromMenu(onOpenSnippets)} />
+        <MenuItem icon={<FolderTree />} label={t('files.toggleTree')} onClick={fromMenu(onToggleFileTree)} />
+        <MenuItem icon={<WandSparkles />} label={t('commands.format')} onClick={fromMenu(onFormat)} />
         {canChangeLayout && (
           <MenuItem icon={orientation === 'horizontal' ? <LayoutPanelTop /> : <Columns2 />} label={layoutLabel} onClick={fromMenu(onToggleOrientation)} />
         )}
@@ -208,7 +212,7 @@ export function PlaygroundHeader({
 
       {/* Primary action */}
       {isRunning ? (
-        <Button variant="danger" icon={<Square className="fill-current" />} onClick={onCancel} title={t('header.stopLabel')} className="min-w-20 xl:min-w-40">
+        <Button variant="danger" icon={<Square className="fill-current" />} onClick={onCancel} title={`${t('header.stopLabel')} (${runKeys[0]} .)`} aria-keyshortcuts={runKeys[0] === '⌘' ? 'Meta+.' : 'Control+.'} className="min-w-20 xl:min-w-40">
           {t('header.stop')}
         </Button>
       ) : (

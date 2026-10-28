@@ -10,6 +10,7 @@ import { FieldMaskSchema } from '@bufbuild/protobuf/wkt';
 import { Theme, UpdateSettingsRequestSchema, type Settings } from '@kingsejong-lang/playground-proto';
 import { useTranslations } from 'next-intl';
 import { assertValid, useRpc } from '@/lib/rpc';
+import { z } from '@/lib/zod';
 import { useFailureText } from '@/hooks/useFailureText';
 
 export interface EditorSettings {
@@ -84,6 +85,38 @@ export function toUpdateRequest(editor: EditorSettings, theme: ThemeSettings) {
   });
 }
 
+/** Anonymous visitors keep their settings in this browser only (signed-in users sync to the server). */
+const LOCAL_SETTINGS_KEY = 'kingsejong-editor-settings';
+
+const LocalSettingsSchema = z.object({
+  editor: z.object({
+    font_size: z.number().int().min(10).max(32),
+    font_family: z.string().max(96),
+    tab_size: z.number().int().min(1).max(8),
+    auto_save: z.boolean(),
+    minimap: z.boolean(),
+  }),
+  theme: z.object({ theme: z.enum(['dark', 'light', 'system']), color_scheme: z.string().max(32) }),
+});
+
+function readLocalSettings(): { editor: EditorSettings; theme: ThemeSettings } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const parsed = LocalSettingsSchema.safeParse(JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) ?? 'null'));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalSettings(editor: EditorSettings, theme: ThemeSettings): void {
+  try {
+    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify({ editor, theme }));
+  } catch {
+    // Storage blocked or full: the settings still apply for this visit.
+  }
+}
+
 interface UseSettingsReturn {
   editorSettings: EditorSettings;
   themeSettings: ThemeSettings;
@@ -102,8 +135,9 @@ export function useSettings(isAuthenticated: boolean): UseSettingsReturn {
 
   const loadSettings = useCallback(async () => {
     if (!isAuthenticated) {
-      setEditorSettings(DEFAULT_EDITOR_SETTINGS);
-      setThemeSettings(DEFAULT_THEME_SETTINGS);
+      const local = readLocalSettings();
+      setEditorSettings(local?.editor ?? DEFAULT_EDITOR_SETTINGS);
+      setThemeSettings(local?.theme ?? DEFAULT_THEME_SETTINGS);
       return;
     }
     try {
@@ -130,7 +164,10 @@ export function useSettings(isAuthenticated: boolean): UseSettingsReturn {
       setThemeSettings(theme);
       setError(null);
 
-      if (!isAuthenticated) return;
+      if (!isAuthenticated) {
+        writeLocalSettings(editor, theme);
+        return;
+      }
 
       try {
         const request = toUpdateRequest(editor, theme);

@@ -10,23 +10,14 @@ import OutputPanel from '@/features/execution/OutputPanel';
 import { EditorSkeleton } from '@/features/editor/CodeEditor';
 import { useCodeExecution } from '@/features/execution/useCodeExecution';
 import { fetchShare } from '@/features/share/useShare';
+import { resolveEntryFile } from '@/features/editor/entry';
+import { GLOBAL_SHORTCUTS } from '@/features/editor/shortcuts';
 import { useTheme } from '@/features/settings/useTheme';
 import { useFailureText } from '@/hooks/useFailureText';
 import { useModifierKey } from '@/components/ui/Kbd';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { Button, buttonClass } from '@/components/ui/Button';
 import { toRpcFailure, useRpc } from '@/lib/rpc';
-
-const MAIN_FILE_PREFERENCE = ['main.ksj', 'main.py', 'main.go'];
-
-/** Entry file of a share: its entry_file, else main.ksj/main.py/main.go, else the first file. */
-function pickEntry(files: SourceFile[], entryFile: string): SourceFile | undefined {
-  return (
-    files.find((f) => f.path === entryFile) ??
-    MAIN_FILE_PREFERENCE.map((p) => files.find((f) => f.path === p)).find(Boolean) ??
-    files[0]
-  );
-}
 
 const CodeEditor = dynamicImport(() => import('@/features/editor/CodeEditor'), {
   loading: () => <EditorSkeleton />,
@@ -74,19 +65,23 @@ function EmbedContent() {
       try {
         setLoading(true);
         const share = await fetchShare(api, shareId);
-        const shareFiles = share.files?.files ?? [];
-        const entry = pickEntry(shareFiles, share.entryFile);
-        setFiles(shareFiles);
-        setEntryPath(entry?.path ?? '');
-        setCode(entry?.content ?? '');
-        setLanguage(share.languageId);
-        setLanguageLabel(share.languageId);
-        setError(null);
-        // Best effort: a readable language name for the header.
-        api.language
+        // The language tells us its default entry file; without it the share's own entry or the first file is used.
+        const lang = await api.language
           .getLanguage({ languageId: share.languageId })
-          .then(({ language: lang }) => lang && setLanguageLabel(`${lang.displayName} ${lang.version}`.trim()))
-          .catch(() => {});
+          .then((r) => r.language)
+          .catch(() => undefined);
+        const shareFiles = share.files?.files ?? [];
+        // Same rule as the editor (features/editor/entry.ts).
+        const entry = resolveEntryFile(
+          shareFiles.map((f) => f.path),
+          { preferred: share.entryFile, defaultEntryFile: lang?.defaultEntryFile }
+        );
+        setFiles(shareFiles);
+        setEntryPath(entry ?? '');
+        setCode(shareFiles.find((f) => f.path === entry)?.content ?? '');
+        setLanguage(share.languageId);
+        setLanguageLabel(lang ? `${lang.displayName} ${lang.version}`.trim() : share.languageId);
+        setError(null);
       } catch (err) {
         setError(toRpcFailure(err).kind === 'not_found' ? t('embed.notFound') : `${t('errors.loadShare')} ${failureText(err)}`);
       } finally {
@@ -101,7 +96,8 @@ function EmbedContent() {
     executeFiles({ languageId: language, files: files.map(({ path, content }) => ({ path, content })), entryFile: entryPath || undefined });
   };
 
-  useKeyboardShortcut('Enter', handleExecute, { ctrl: true, enabled: !running && !loading && !error });
+  useKeyboardShortcut(GLOBAL_SHORTCUTS.run.key, handleExecute, { ctrl: true, enabled: !running && !loading && !error });
+  useKeyboardShortcut(GLOBAL_SHORTCUTS.stop.key, cancel, { ctrl: true, enabled: running });
 
   const fullEditorHref = `/${locale}?share=${encodeURIComponent(shareId)}`;
 

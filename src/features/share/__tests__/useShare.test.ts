@@ -19,7 +19,7 @@ function setup() {
 describe('useShare', () => {
   it('creates a share and builds the URL', async () => {
     const { result, createShare } = setup();
-    await act(() => result.current.createShare('출력(1)', 'kingsejong', languages));
+    await act(() => result.current.createShare([{ name: 'main.ksj', content: '출력(1)' }], {}, 'kingsejong', languages));
     expect(result.current.shareId).toBe('AbCdEfGh1234');
     expect(result.current.shareUrl).toMatch(/\?share=AbCdEfGh1234$/);
     const req = (createShare.mock.calls[0] as unknown[])[0] as { files: { files: { path: string }[] }; title: string };
@@ -27,11 +27,32 @@ describe('useShare', () => {
     expect(req.title).toBe('KingSejong Code');
   });
 
-  it('loads the entry file of a share', async () => {
+  it('shares every file and the entry file', async () => {
+    const { result, createShare } = setup();
+    await act(() =>
+      result.current.createShare(
+        [
+          { name: 'main.ksj', content: 'A' },
+          { name: 'util.ksj', content: 'B' },
+        ],
+        { preferred: 'util.ksj' },
+        'kingsejong',
+        languages
+      )
+    );
+    const req = (createShare.mock.calls[0] as unknown[])[0] as { files: { files: { path: string }[] }; entryFile: string };
+    expect(req.files.files.map((f) => f.path)).toEqual(['main.ksj', 'util.ksj']);
+    expect(req.entryFile).toBe('util.ksj');
+  });
+
+  it('loads all files of a share with its entry file', async () => {
     const { result } = setup();
     const onLoad = vi.fn();
     await act(() => result.current.loadShared('AbCdEfGh1234', onLoad));
-    expect(onLoad).toHaveBeenCalledWith('kingsejong', 'B');
+    expect(onLoad).toHaveBeenCalledWith('kingsejong', [
+      { name: 'a.ksj', content: 'A' },
+      { name: 'b.ksj', content: 'B' },
+    ], 'b.ksj');
   });
 
   it('rejects a malformed share id without a request', async () => {

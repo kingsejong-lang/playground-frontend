@@ -25,6 +25,7 @@ import {
   type ExecutionResult,
 } from '@/lib/rpc';
 import { resolveLanguage, getMainFilename } from '@/lib/utils/language';
+import { buildRunFiles, type EntryOptions } from '@/features/editor/entry';
 import { useTranslations } from 'next-intl';
 import { useFailureText } from '@/hooks/useFailureText';
 
@@ -47,6 +48,13 @@ interface UseCodeExecutionReturn {
   /** Seconds the server asked us to wait before retrying (rate limit / overload). */
   retryAfterSeconds: number | null;
   execute: (code: string, language: string, languages: readonly Language[]) => Promise<void>;
+  /** Runs every workspace file; the entry follows entry.ts (choice, language default, first file). */
+  runWorkspace: (
+    files: readonly { name: string; content: string }[],
+    entry: Pick<EntryOptions, 'preferred'>,
+    language: string,
+    languages: readonly Language[]
+  ) => Promise<void>;
   executeFiles: (input: RunFilesInput) => Promise<void>;
   cancel: () => void;
   reset: () => void;
@@ -110,7 +118,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       if (!files.some((f) => f.content.trim())) {
         setError(t('emptyCode'));
         setErrorKind(null);
-    setRetryAfterSeconds(null);
+        setRetryAfterSeconds(null);
         return;
       }
 
@@ -140,7 +148,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       setOutput(emptyResult());
       setError(null);
       setErrorKind(null);
-    setRetryAfterSeconds(null);
+      setRetryAfterSeconds(null);
 
       const throttle = createFrameThrottle((r) => {
         if (controllerRef.current !== controller) return;
@@ -181,7 +189,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       if (!code.trim()) {
         setError(t('emptyCode'));
         setErrorKind(null);
-    setRetryAfterSeconds(null);
+        setRetryAfterSeconds(null);
         return;
       }
       const lang = resolveLanguage(language, languages);
@@ -195,12 +203,33 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       if (!lang) {
         setError(t('languageNotFound'));
         setErrorKind(null);
-    setRetryAfterSeconds(null);
+        setRetryAfterSeconds(null);
         return;
       }
       // Behaviour preserved: the active file is sent alone, as the entry file.
       const path = getMainFilename(lang);
       await executeFiles({ languageId: language, files: [{ path, content: code }], entryFile: path });
+    },
+    [executeFiles, t]
+  );
+
+  const runWorkspace = useCallback(
+    async (
+      files: readonly { name: string; content: string }[],
+      entry: Pick<EntryOptions, 'preferred'>,
+      language: string,
+      languages: readonly Language[]
+    ) => {
+      const lang = resolveLanguage(language, languages);
+      if (!lang && languages.length > 0) {
+        setError(t('languageNotFound'));
+        setErrorKind(null);
+        setRetryAfterSeconds(null);
+        return;
+      }
+      // Without a language list (backend down) the first file is the entry; the server reports the real state.
+      const run = buildRunFiles(files, { preferred: entry.preferred, defaultEntryFile: lang?.defaultEntryFile });
+      await executeFiles({ languageId: language, files: run.files, entryFile: run.entryFile });
     },
     [executeFiles, t]
   );
@@ -222,5 +251,5 @@ export function useCodeExecution(): UseCodeExecutionReturn {
     setRetryAfterSeconds(null);
   }, []);
 
-  return { output, loading, streaming, error, errorKind, retryAfterSeconds, execute, executeFiles, cancel, reset };
+  return { output, loading, streaming, error, errorKind, retryAfterSeconds, execute, runWorkspace, executeFiles, cancel, reset };
 }

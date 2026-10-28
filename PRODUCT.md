@@ -54,8 +54,9 @@ syntax highlighting, its formatter (`kingsejong fmt` through `FormatCode`) and K
   concurrency, runs per minute. Total source is capped (`MAX_TOTAL_SOURCE_BYTES`).
 - Only `src/lib/rpc` talks to the network; a strict per-request CSP (nonce + `strict-dynamic`) is
   enforced, so no inline scripts or HTML injection sinks.
-- Multi-file editing exists in the editor, but a run sends the active file as the entry file
-  (behaviour kept from the previous version).
+- A run (and a share) sends every open file and starts from the entry file: the user's choice, else
+  the language's `default_entry_file` when present, else the first file. Work is kept as a local
+  draft per language (Mod+S, or auto-save when enabled); nothing is sent for drafts.
 - Locales: `ko` (default) and `en` via next-intl.
 - Undecided: account features beyond settings sync; share expiry and deletion UI. **(inferred)**
 

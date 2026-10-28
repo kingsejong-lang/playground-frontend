@@ -41,7 +41,9 @@
     "more": "메뉴 더 보기",
     "uiLanguage": "화면 언어",
     "tools": "플레이그라운드 도구",
-    "noLanguages": "언어 목록 없음"
+    "noLanguages": "언어 목록 없음",
+    "saveDraft": "임시 저장",
+    "palette": "명령 팔레트"
   },
   "files": {
     "tabs": "열린 파일",
@@ -58,7 +60,11 @@
     "deleted": "파일을 삭제했어요",
     "lastFile": "파일이 하나는 있어야 해요",
     "empty": "아직 파일이 없어요",
-    "renameHint": "두 번 클릭하거나 F2를 눌러 이름을 바꿀 수 있어요"
+    "renameHint": "두 번 클릭하거나 F2를 눌러 이름을 바꿀 수 있어요",
+    "entry": "진입 파일",
+    "setEntry": "진입 파일로 지정",
+    "entryHint": "실행하면 이 파일부터 시작해요",
+    "menu": "{name} 메뉴"
   },
   "editor": {
     "loading": "편집기를 불러오고 있어요…",
@@ -267,7 +273,8 @@
     "schemeHighContrast": "고대비",
     "reset": "기본값으로 되돌리기",
     "saveSettings": "설정 저장",
-    "syncNote": "로그인하면 설정이 계정에 저장돼요."
+    "syncNote": "로그인하면 설정이 계정에 저장돼요.",
+    "autoSaveHint": "편집 내용을 1초 뒤 이 브라우저에 자동으로 임시 저장해요. 다음에 열면 그대로 이어서 쓸 수 있어요."
   },
   "auth": {
     "login": "로그인",
@@ -283,25 +290,17 @@
   },
   "shortcuts": {
     "title": "키보드 단축키",
-    "execution": "실행",
-    "editor": "편집",
-    "panels": "패널",
-    "view": "화면",
+    "global": "어디서나",
+    "inEditor": "편집기 안에서",
     "run": "코드 실행",
-    "clear": "출력 지우기 (실행 중이면 중지)",
-    "format": "코드 정리",
-    "settings": "설정 열기",
-    "history": "실행 기록 열기/닫기",
-    "fileTree": "파일 목록 열기/닫기",
-    "templates": "템플릿 열기",
-    "snippets": "스니펫 열기",
-    "share": "코드 공유",
-    "help": "단축키 보기",
+    "stop": "실행 중지",
+    "save": "이 브라우저에 임시 저장",
+    "help": "단축키 보기 (입력 중이 아닐 때)",
+    "palette": "명령 팔레트 (템플릿, 기록, 설정, 공유 등)",
+    "tabFocus": "Tab 키로 편집기 밖으로 이동 (켜기/끄기)",
     "closeDialog": "대화 상자 닫기",
-    "theme": "밝은/어두운 테마 바꾸기",
-    "layout": "배치 바꾸기",
     "toggleHint": "편집기 밖에서 <key></key> 키를 누르면 언제든 이 목록을 볼 수 있어요.",
-    "tabFocus": "Tab 키로 편집기 밖으로 이동 (켜기/끄기)"
+    "menuNote": "템플릿, 실행 기록, 설정, 공유, 배치, 테마는 ☰ 메뉴와 명령 팔레트(F1)에 있어요. 브라우저 단축키와 겹치지 않도록 따로 키를 두지 않았어요."
   },
   "toast": {
     "formatted": "코드를 정리했어요",
@@ -326,5 +325,28 @@
   },
   "time": {
     "justNow": "방금"
+  },
+  "commands": {
+    "run": "코드 실행",
+    "runThisFile": "이 파일을 진입 파일로 실행",
+    "stop": "실행 중지",
+    "saveDraft": "이 브라우저에 임시 저장",
+    "setEntry": "이 파일을 진입 파일로 지정",
+    "format": "코드 정리",
+    "templates": "템플릿 열기",
+    "snippets": "스니펫 열기",
+    "history": "실행 기록 열기",
+    "settings": "설정 열기",
+    "share": "코드 공유",
+    "toggleLayout": "편집기/출력 배치 바꾸기",
+    "toggleTheme": "밝은/어두운 테마 바꾸기",
+    "toggleFileTree": "파일 목록 열기/닫기",
+    "shortcuts": "단축키 보기",
+    "clearOutput": "출력 지우기"
+  },
+  "draft": {
+    "saved": "임시 저장됨 {time}",
+    "savedLong": "이 브라우저에 {time}에 임시 저장했어요",
+    "restored": "이 브라우저에 저장해 둔 코드를 불러왔어요"
   }
 }

@@ -247,6 +247,15 @@ status chips. Hairline borders (1px) everywhere; no thick or coloured side borde
 - Header: mark, title, language select, tool buttons, "more" menu (popover), Run. The active file tab
   carries a 2px indigo rule on its top edge.
 
+### Files and the entry file
+- Tabs and the file list mark the entry file (the file a run starts from) with a small filled play
+  triangle in indigo text in place of the file icon, plus the words "진입 파일 / Entry file" for screen
+  readers (and visibly in the file list). The mark appears only when there is more than one file.
+- A file's context menu (right-click, the ContextMenu key or Shift+F10) is a small raised popover:
+  set as entry file, rename, close/delete. The file list also shows a play button per row on hover/focus.
+- Local draft saves are confirmed quietly at the right end of the tab bar (check icon + "임시 저장됨 14:02"),
+  never with a toast.
+
 ### Run sweep (signature motion)
 - While a run is live, a short indigo bar sweeps along the bottom edge of the output header (1.4s).
   With reduced motion it becomes a static band; the status chip still says "실행 중".

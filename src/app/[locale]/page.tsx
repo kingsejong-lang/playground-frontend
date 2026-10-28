@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { useLocale, useTranslations } from 'next-intl';
@@ -9,7 +9,11 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 // Components
 import OutputPanel from '@/features/execution/OutputPanel';
 import FileTabs from '@/features/editor/FileTabs';
-import { EditorSkeleton, type RevealRequest } from '@/features/editor/CodeEditor';
+import { EditorSkeleton, type EditorCommand, type RevealRequest } from '@/features/editor/CodeEditor';
+import { resolveEntryFile } from '@/features/editor/entry';
+import { loadDraft, saveDraft } from '@/features/editor/drafts';
+import { useDraft } from '@/features/editor/useDraft';
+import { GLOBAL_SHORTCUTS } from '@/features/editor/shortcuts';
 import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { PlaygroundModals } from './components/PlaygroundModals';
 import { useModifierKey } from '@/components/ui/Kbd';
@@ -72,6 +76,9 @@ function PlaygroundContent() {
     renameFile,
     updateFileContent,
     setActiveFile,
+    entryFile,
+    setEntryFile,
+    replaceFiles,
   } = useFiles('main.ksj', '');
 
   const { editorSettings, themeSettings, error: settingsError, saveSettings } = useSettings(isAuthenticated);
@@ -83,7 +90,7 @@ function PlaygroundContent() {
     error: executionError,
     errorKind: executionErrorKind,
     retryAfterSeconds,
-    execute,
+    runWorkspace,
     cancel: cancelExecution,
     reset: resetExecution,
   } = useCodeExecution();
@@ -138,15 +145,43 @@ function PlaygroundContent() {
     initializedRef.current.clear();
   }, [selectedLanguage]);
 
-  // Handlers
-  const getCurrentCode = useCallback(() => activeFile?.content || '', [activeFile]);
+  // Workspace and entry file (see features/editor/entry.ts)
+  const workspace = useMemo(() => files.map((f) => ({ name: f.name, content: f.content })), [files]);
+  const currentLanguage = languages.find((l) => l.id === selectedLanguage);
+  const entryName = resolveEntryFile(
+    workspace.map((f) => f.name),
+    { preferred: entryFile?.name, defaultEntryFile: currentLanguage?.defaultEntryFile }
+  );
+  const entryId = files.find((f) => f.name === entryName)?.id ?? null;
+  const running = executing || streaming;
 
-  const handleExecuteCode = useCallback(() => {
-    // With the backend known to be down, Run also tries to reconnect (the banner shows progress).
-    if (languageError && languageErrorKind === 'unavailable') retryLanguages();
-    setRunFileId(activeFile?.id ?? null);
-    execute(getCurrentCode(), selectedLanguage, languages);
-  }, [activeFile, getCurrentCode, selectedLanguage, languages, execute, languageError, languageErrorKind, retryLanguages]);
+  // Local drafts: Mod+S and, with the auto-save setting, after edits settle.
+  const { saveNow: saveDraftNow, lastSavedAt } = useDraft({
+    languageId: selectedLanguage,
+    files: workspace,
+    entry: entryFile?.name,
+    active: activeFile?.name,
+    autoSave: editorSettings.auto_save,
+  });
+  const draftStatus = lastSavedAt
+    ? t('draft.saved', { time: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(new Date(lastSavedAt)) })
+    : null;
+
+  // Handlers
+  const runWith = useCallback(
+    (preferred: string | undefined) => {
+      // With the backend known to be down, Run also tries to reconnect (the banner shows progress).
+      if (languageError && languageErrorKind === 'unavailable') retryLanguages();
+      setRunFileId(files.find((f) => f.name === (preferred ?? entryName))?.id ?? null);
+      void runWorkspace(workspace, { preferred }, selectedLanguage, languages);
+    },
+    [files, entryName, workspace, selectedLanguage, languages, runWorkspace, languageError, languageErrorKind, retryLanguages]
+  );
+
+  /** Runs all files from the entry file. */
+  const handleExecuteCode = useCallback(() => runWith(entryFile?.name), [runWith, entryFile]);
+  /** Runs all files, starting from the active file for this run only. */
+  const handleRunThisFile = useCallback(() => runWith(activeFile?.name), [runWith, activeFile]);
 
   const handleFormatCode = useCallback(async () => {
     if (!activeFile?.content) return;
@@ -160,8 +195,8 @@ function PlaygroundContent() {
   }, [activeFile, selectedLanguage, updateFileContent, toast, formatCode, t]);
 
   const handleShare = useCallback(() => {
-    createShare(getCurrentCode(), selectedLanguage, languages);
-  }, [createShare, getCurrentCode, selectedLanguage, languages]);
+    void createShare(workspace, { preferred: entryFile?.name }, selectedLanguage, languages);
+  }, [createShare, workspace, entryFile, selectedLanguage, languages]);
 
   const embedCode = shareId
     ? `<iframe src="${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/embed/${shareId}" width="100%" height="600" style="border:0" title="${t('app.title')}"></iframe>`
@@ -226,12 +261,36 @@ function PlaygroundContent() {
     [saveSettings, setTheme]
   );
 
+  /** Restores this language's local draft, if any, keeping the visible work as the previous language's draft. */
+  const handleLanguageChange = useCallback(
+    (languageId: string) => {
+      const draft = loadDraft(languageId);
+      if (draft) {
+        if (selectedLanguage) saveDraft(selectedLanguage, { files: workspace, entry: entryFile?.name, active: activeFile?.name });
+        replaceFiles(draft.files, { entry: draft.entry, active: draft.active });
+        toast.info(t('draft.restored'));
+      }
+      changeLanguage(languageId);
+    },
+    [selectedLanguage, workspace, entryFile, activeFile, replaceFiles, changeLanguage, toast, t]
+  );
+
+  // On first load (not a shared link), pick up this language's local draft.
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (draftChecked.current || loadingLanguages || !selectedLanguage) return;
+    draftChecked.current = true;
+    if (searchParams.get('share')) return;
+    const draft = loadDraft(selectedLanguage);
+    if (draft) replaceFiles(draft.files, { entry: draft.entry, active: draft.active });
+  }, [loadingLanguages, selectedLanguage, searchParams, replaceFiles]);
+
   // Save to history when execution completes (cancelled runs are not recorded)
   useEffect(() => {
     if (output && !executing && !streaming && output.status !== 'cancelled' && output.status !== 'pending') {
       history.addItem({
         language: selectedLanguage,
-        code: getCurrentCode(),
+        code: files.find((f) => f.id === runFileId)?.content ?? activeFile?.content ?? '',
         output,
         success: output.success,
       });
@@ -242,29 +301,48 @@ function PlaygroundContent() {
   useEffect(() => {
     const shareIdParam = searchParams.get('share');
     if (shareIdParam) {
-      loadShared(shareIdParam, (language, sharedCode) => {
+      loadShared(shareIdParam, (language, sharedFiles, sharedEntry) => {
         setSelectedLanguage(language);
-        if (activeFile) {
-          updateFileContent(activeFile.id, sharedCode);
-        }
+        if (sharedFiles.length > 0) replaceFiles(sharedFiles, { entry: sharedEntry, active: sharedEntry });
         resetExecution();
       });
     }
   }, [searchParams]);
 
-  // Keyboard shortcuts
-  useKeyboardShortcut('Enter', handleExecuteCode, { ctrl: true, enabled: !executing && !streaming });
-  useKeyboardShortcut('k', resetExecution, { ctrl: true });
-  useKeyboardShortcut(',', () => setShowSettings(true), { ctrl: true });
-  useKeyboardShortcut('h', () => setShowHistory((prev) => !prev), { ctrl: true });
-  useKeyboardShortcut('?', () => setShowShortcutsHelp((prev) => !prev));
-  useKeyboardShortcut('s', handleShare, { ctrl: true, enabled: !sharing });
-  useKeyboardShortcut('t', () => setShowTemplateGallery((prev) => !prev), { ctrl: true });
-  useKeyboardShortcut('l', () => setShowSnippetLibrary((prev) => !prev), { ctrl: true });
-  useKeyboardShortcut('f', () => setShowFileTree((prev) => !prev), { ctrl: true });
-  useKeyboardShortcut('f', handleFormatCode, { ctrl: true, shift: true, enabled: !!activeFile?.content });
-  useKeyboardShortcut('/', toggleTheme, { ctrl: true });
-  useKeyboardShortcut('b', toggleOrientation, { ctrl: true });
+  const handleStop = useCallback(() => {
+    if (running) cancelExecution();
+  }, [running, cancelExecution]);
+
+  // Global shortcuts: only run, stop, save draft and help (see features/editor/shortcuts.ts).
+  // Inside the editor the same keys are Monaco actions (registered below), which take precedence.
+  const { run: runKey, stop: stopKey, save: saveKey, help: helpKey } = GLOBAL_SHORTCUTS;
+  useKeyboardShortcut(runKey.key, handleExecuteCode, { ctrl: runKey.mod, enabled: !running });
+  useKeyboardShortcut(stopKey.key, handleStop, { ctrl: stopKey.mod, enabled: running });
+  useKeyboardShortcut(saveKey.key, () => void saveDraftNow(), { ctrl: saveKey.mod });
+  useKeyboardShortcut(helpKey.key, () => setShowShortcutsHelp((prev) => !prev));
+
+  // Everything else is reachable from the menu and from the editor's command palette (F1).
+  const editorCommands = useMemo<EditorCommand[]>(
+    () => [
+      { id: 'run', label: t('commands.run'), run: () => !running && handleExecuteCode(), key: 'run', contextMenu: true },
+      { id: 'runThisFile', label: t('commands.runThisFile'), run: () => !running && handleRunThisFile(), contextMenu: true },
+      { id: 'stop', label: t('commands.stop'), run: handleStop, key: 'stop' },
+      { id: 'saveDraft', label: t('commands.saveDraft'), run: () => void saveDraftNow(), key: 'save' },
+      { id: 'setEntry', label: t('commands.setEntry'), run: () => activeFile && setEntryFile(activeFile.id), contextMenu: true },
+      { id: 'format', label: t('commands.format'), run: () => void handleFormatCode() },
+      { id: 'templates', label: t('commands.templates'), run: () => setShowTemplateGallery(true) },
+      { id: 'snippets', label: t('commands.snippets'), run: () => setShowSnippetLibrary(true) },
+      { id: 'history', label: t('commands.history'), run: () => setShowHistory(true) },
+      { id: 'share', label: t('commands.share'), run: handleShare },
+      { id: 'settings', label: t('commands.settings'), run: () => setShowSettings(true) },
+      { id: 'toggleFileTree', label: t('commands.toggleFileTree'), run: () => setShowFileTree((prev) => !prev) },
+      { id: 'toggleLayout', label: t('commands.toggleLayout'), run: toggleOrientation },
+      { id: 'toggleTheme', label: t('commands.toggleTheme'), run: toggleTheme },
+      { id: 'clearOutput', label: t('commands.clearOutput'), run: resetExecution },
+      { id: 'shortcuts', label: t('commands.shortcuts'), run: () => setShowShortcutsHelp(true) },
+    ],
+    [t, running, handleExecuteCode, handleRunThisFile, handleStop, saveDraftNow, activeFile, setEntryFile, handleFormatCode, handleShare, toggleOrientation, toggleTheme, resetExecution]
+  );
 
   if (loadingLanguages) {
     return <AppShellSkeleton label={t('app.loading')} />;
@@ -279,7 +357,8 @@ function PlaygroundContent() {
       ? 'code-sanctuary-dark'
       : 'code-sanctuary-light';
   const direction = narrow ? 'vertical' : orientation;
-  const runDiagnostics = output && runFileId === activeFileId ? output.diagnostics : undefined;
+  // Every file was sent, so a diagnostic belongs to the file its path names (no path: the entry file).
+  const runDiagnostics = output?.diagnostics.filter((d) => (d.path ? d.path === activeFile?.name : runFileId === activeFileId));
 
   return (
     <div className="flex h-dvh flex-col bg-void">
@@ -293,7 +372,7 @@ function PlaygroundContent() {
       <PlaygroundHeader
         languages={languages}
         selectedLanguage={selectedLanguage}
-        onLanguageChange={changeLanguage}
+        onLanguageChange={handleLanguageChange}
         user={user}
         isAuthenticated={isAuthenticated}
         onLogout={logout}
@@ -308,6 +387,7 @@ function PlaygroundContent() {
         onOpenHistory={() => setShowHistory(true)}
         onToggleFileTree={() => setShowFileTree((prev) => !prev)}
         onFormat={handleFormatCode}
+        onSaveDraft={() => void saveDraftNow()}
         onOpenShortcuts={() => setShowShortcutsHelp(true)}
         onShare={handleShare}
         sharing={sharing}
@@ -330,6 +410,8 @@ function PlaygroundContent() {
             onAddFile={handleAddFile}
             onRenameFile={renameFile}
             onDeleteFile={deleteFile}
+            entryFileId={entryId}
+            onSetEntry={setEntryFile}
           />
         )}
 
@@ -345,6 +427,9 @@ function PlaygroundContent() {
                 onAddFile={handleAddFile}
                 onToggleFileTree={() => setShowFileTree((prev) => !prev)}
                 fileTreeOpen={showFileTree}
+                entryFileId={entryId}
+                onSetEntry={setEntryFile}
+                draftStatus={draftStatus}
               />
               <div className="min-h-0 flex-1">
                 <CodeEditor
@@ -357,7 +442,7 @@ function PlaygroundContent() {
                   tabSize={editorSettings.tab_size}
                   minimap={editorSettings.minimap && !narrow}
                   theme={editorTheme}
-                  onFormat={handleFormatCode}
+                  commands={editorCommands}
                   ariaLabel={`${t('editor.label')}: ${activeFile?.name ?? ''}`}
                   diagnostics={runDiagnostics}
                   reveal={reveal}
