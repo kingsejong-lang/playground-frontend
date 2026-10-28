@@ -3,7 +3,6 @@ import {
   validate,
   isError,
   hasMessage,
-  isAxiosError,
   parseJSON,
   parseAndValidate,
   isFileReaderResult,
@@ -50,7 +49,7 @@ describe('guards', () => {
 
       expect(isErr(result)).toBe(true)
       if (!result.ok) {
-        expect(result.error.field).toBe('name')
+        expect((result.error as { field?: string }).field).toBe('name')
       }
     })
   })
@@ -99,36 +98,6 @@ describe('guards', () => {
     })
   })
 
-  describe('isAxiosError', () => {
-    it('should return true for axios error', () => {
-      const axiosError = {
-        message: 'Request failed',
-        isAxiosError: true,
-        response: {
-          data: { message: 'Server error' },
-          status: 500,
-        },
-      }
-      expect(isAxiosError(axiosError)).toBe(true)
-    })
-
-    it('should return false when isAxiosError is false', () => {
-      const notAxiosError = {
-        message: 'Error',
-        isAxiosError: false,
-      }
-      expect(isAxiosError(notAxiosError)).toBe(false)
-    })
-
-    it('should return false for regular error', () => {
-      expect(isAxiosError(new Error('test'))).toBe(false)
-    })
-
-    it('should return false for null', () => {
-      expect(isAxiosError(null)).toBe(false)
-    })
-  })
-
   describe('parseJSON', () => {
     it('should parse valid JSON string', () => {
       const result = parseJSON('{"name":"John","age":30}')
@@ -163,7 +132,7 @@ describe('guards', () => {
 
       expect(isErr(result)).toBe(true)
       if (!result.ok) {
-        expect(result.error.data).toBe(invalidJSON)
+        expect((result.error as { data?: unknown }).data).toBe(invalidJSON)
       }
     })
   })
@@ -327,26 +296,6 @@ describe('guards', () => {
       expect(extractErrorMessage(error)).toBe('Test error')
     })
 
-    it('should extract message from axios error', () => {
-      const axiosError = {
-        message: 'Request failed',
-        isAxiosError: true,
-        response: {
-          data: { message: 'Server error' },
-          status: 500,
-        },
-      }
-      expect(extractErrorMessage(axiosError)).toBe('Server error')
-    })
-
-    it('should fallback to axios message when no response data', () => {
-      const axiosError = {
-        message: 'Request failed',
-        isAxiosError: true,
-      }
-      expect(extractErrorMessage(axiosError)).toBe('Request failed')
-    })
-
     it('should extract message from object with message', () => {
       expect(extractErrorMessage({ message: 'Custom error' })).toBe('Custom error')
     })
@@ -363,26 +312,6 @@ describe('guards', () => {
   })
 
   describe('extractErrorStatus', () => {
-    it('should extract status from axios error', () => {
-      const axiosError = {
-        message: 'Request failed',
-        isAxiosError: true,
-        response: {
-          data: { message: 'Server error' },
-          status: 500,
-        },
-      }
-      expect(extractErrorStatus(axiosError)).toBe(500)
-    })
-
-    it('should return undefined for axios error without response', () => {
-      const axiosError = {
-        message: 'Request failed',
-        isAxiosError: true,
-      }
-      expect(extractErrorStatus(axiosError)).toBeUndefined()
-    })
-
     it('should extract status from object with status property', () => {
       expect(extractErrorStatus({ status: 404 })).toBe(404)
     })

@@ -1,194 +1,203 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
-import OutputPanel from '@/components/OutputPanel';
-import { useCodeExecution } from '@/hooks/useCodeExecution';
-import { shareAPI } from '@/lib/api';
+import { useLocale, useTranslations } from 'next-intl';
+import { AlertTriangle, ExternalLink, Play, Square } from 'lucide-react';
+import type { SourceFile } from '@kingsejong-lang/playground-proto';
+import OutputPanel from '@/features/execution/OutputPanel';
+import { EditorSkeleton } from '@/features/editor/CodeEditor';
+import { useCodeExecution } from '@/features/execution/useCodeExecution';
+import { fetchShare } from '@/features/share/useShare';
+import { useTheme } from '@/features/settings/useTheme';
+import { useFailureText } from '@/hooks/useFailureText';
+import { useModifierKey } from '@/components/ui/Kbd';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import { Button, buttonClass } from '@/components/ui/Button';
+import { toRpcFailure, useRpc } from '@/lib/rpc';
 
-// Dynamic imports
-const CodeEditor = dynamicImport(() => import('@/components/CodeEditor'), {
-  loading: () => (
-    <div className="h-full flex items-center justify-center bg-gray-900">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading editor...</p>
-      </div>
-    </div>
-  ),
+const MAIN_FILE_PREFERENCE = ['main.ksj', 'main.py', 'main.go'];
+
+/** Entry file of a share: its entry_file, else main.ksj/main.py/main.go, else the first file. */
+function pickEntry(files: SourceFile[], entryFile: string): SourceFile | undefined {
+  return (
+    files.find((f) => f.path === entryFile) ??
+    MAIN_FILE_PREFERENCE.map((p) => files.find((f) => f.path === p)).find(Boolean) ??
+    files[0]
+  );
+}
+
+const CodeEditor = dynamicImport(() => import('@/features/editor/CodeEditor'), {
+  loading: () => <EditorSkeleton />,
   ssr: false,
 });
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
 function EmbedContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const shareId = params.id as string;
+  const api = useRpc();
+  const locale = useLocale();
+  const t = useTranslations();
+  const failureText = useFailureText();
+  const mod = useModifierKey();
+  const { resolvedTheme } = useTheme();
+  // Embedders can pin a theme with ?theme=light|dark without touching the visitor's preference.
+  const forcedTheme = searchParams.get('theme');
+  const theme = forcedTheme === 'light' || forcedTheme === 'dark' ? forcedTheme : resolvedTheme;
 
+  const [files, setFiles] = useState<SourceFile[]>([]);
+  const [entryPath, setEntryPath] = useState('');
   const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('kingsejong_v0_3');
+  const [language, setLanguage] = useState('kingsejong');
+  const [languageLabel, setLanguageLabel] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const {
-    output,
-    loading: executing,
-    streaming,
-    streamEvents,
-    error: executionError,
-    execute,
-    reset: resetExecution,
-  } = useCodeExecution({
-    enableWebSocket: false, // Use HTTP for embed mode
-  });
+  const { output, loading: executing, streaming, error: executionError, errorKind, executeFiles, cancel, reset } = useCodeExecution();
+  const running = executing || streaming;
 
-  // Load shared code
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.classList.toggle('light', theme === 'light');
+  }, [theme]);
+
   useEffect(() => {
     const loadShare = async () => {
       if (!shareId) {
-        setError('Share ID is required');
+        setError(t('embed.missingId'));
         setLoading(false);
         return;
       }
-
       try {
         setLoading(true);
-        const share = await shareAPI.get(shareId);
-
-        // Get the main file content
-        let mainContent = '';
-        if (share.files['main.ksj']) {
-          mainContent = share.files['main.ksj'];
-        } else if (share.files['main.py']) {
-          mainContent = share.files['main.py'];
-        } else if (share.files['main.go']) {
-          mainContent = share.files['main.go'];
-        } else {
-          // Get first file
-          const firstFile = Object.values(share.files)[0];
-          mainContent = firstFile || '';
-        }
-
-        setCode(mainContent);
-        setLanguage(share.language);
+        const share = await fetchShare(api, shareId);
+        const shareFiles = share.files?.files ?? [];
+        const entry = pickEntry(shareFiles, share.entryFile);
+        setFiles(shareFiles);
+        setEntryPath(entry?.path ?? '');
+        setCode(entry?.content ?? '');
+        setLanguage(share.languageId);
+        setLanguageLabel(share.languageId);
         setError(null);
+        // Best effort: a readable language name for the header.
+        api.language
+          .getLanguage({ languageId: share.languageId })
+          .then(({ language: lang }) => lang && setLanguageLabel(`${lang.displayName} ${lang.version}`.trim()))
+          .catch(() => {});
       } catch (err) {
-        console.error('Failed to load shared code:', err);
-        setError('Failed to load shared code');
+        setError(toRpcFailure(err).kind === 'not_found' ? t('embed.notFound') : `${t('errors.loadShare')} ${failureText(err)}`);
       } finally {
         setLoading(false);
       }
     };
-
     loadShare();
-  }, [shareId]);
+  }, [api, shareId, t, failureText]);
 
   const handleExecute = () => {
-    execute(code, language, []);
+    // Run the shared program as stored (all files), entry file first.
+    executeFiles({ languageId: language, files: files.map(({ path, content }) => ({ path, content })), entryFile: entryPath || undefined });
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  useKeyboardShortcut('Enter', handleExecute, { ctrl: true, enabled: !running && !loading && !error });
+
+  const fullEditorHref = `/${locale}?share=${encodeURIComponent(shareId)}`;
 
   if (error) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold mb-2">Error</h1>
-          <p className="text-gray-400">{error}</p>
+      <div className="flex h-dvh items-center justify-center bg-void p-6">
+        <div className="max-w-sm text-center" role="alert">
+          <AlertTriangle className="mx-auto mb-3 size-6 text-warn" aria-hidden="true" />
+          <h1 className="text-base font-semibold text-fg">{t('embed.errorTitle')}</h1>
+          <p className="mt-1 text-sm text-fg-secondary">{error}</p>
+          <a href={`/${locale}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm text-accent-text underline-offset-4 hover:underline">
+            {t('embed.newCode')}
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+          </a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
-      {/* Minimal Header */}
-      <header className="bg-gray-900 border-b border-gray-800 px-4 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-white">
-              킹세종 Playground
-            </h1>
-            <span className="text-xs text-gray-500">Embed Mode</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExecute}
-              disabled={executing || streaming}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors"
-              aria-label="Run code"
-              aria-busy={executing || streaming}
-            >
-              {executing || streaming ? 'Running...' : '▶ Run'}
-            </button>
-          </div>
+    <div className="flex h-dvh flex-col bg-void">
+      <header className="relative flex h-12 shrink-0 items-center gap-2 border-b border-hair bg-surface px-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-0.5" aria-hidden="true">
+          <span className="flex-[5] bg-dancheong-blue" />
+          <span className="flex-[2] bg-dancheong-red" />
+          <span className="flex-[1] bg-dancheong-yellow" />
+          <span className="flex-[2] bg-dancheong-green" />
         </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- tiny static SVG mark */}
+        <img src="/icon.svg" alt="" width={22} height={22} className="size-[22px] rounded-sm" />
+        <h1 className="min-w-0 truncate text-sm font-semibold text-fg">{t('app.title')}</h1>
+        {languageLabel && <span className="shrink-0 rounded-sm bg-hover px-1.5 py-0.5 text-xs text-fg-secondary">{languageLabel}</span>}
+        <span className="flex-1" />
+        {running ? (
+          <Button variant="danger" size="sm" icon={<Square className="fill-current" />} onClick={cancel} title={t('header.stopLabel')}>
+            {t('header.stop')}
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<Play className="fill-current" />}
+            onClick={handleExecute}
+            disabled={loading}
+            title={t('header.runLabel', { shortcut: `${mod} Enter` })}
+          >
+            {t('header.run')}
+          </Button>
+        )}
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Editor Panel */}
-        <div className="w-1/2 border-r border-gray-800">
-          <div className="h-full">
+      <main className="flex min-h-0 flex-1 max-sm:flex-col">
+        <section className="flex min-h-0 flex-col border-hair max-sm:h-1/2 max-sm:border-b sm:w-1/2 sm:border-r" aria-label={t('editor.label')}>
+          <p className="flex h-8 shrink-0 items-center gap-2 border-b border-hair bg-surface px-3 text-xs text-fg-muted">
+            <span className="font-mono text-fg-secondary">{entryPath}</span>
+            <span aria-hidden="true">·</span>
+            <span className="truncate">{t('embed.readOnly')}</span>
+          </p>
+          <div className="min-h-0 flex-1">
+          {loading ? (
+            <EditorSkeleton label={t('common.loading')} />
+          ) : (
             <CodeEditor
               value={code}
               onChange={setCode}
               language={language}
               readOnly={true}
               fontSize={14}
-              fontFamily="Fira Code, Monaco, monospace"
               tabSize={2}
               minimap={false}
-              theme="vs-dark"
+              theme={theme === 'dark' ? 'code-sanctuary-dark' : 'code-sanctuary-light'}
+              ariaLabel={`${t('editor.label')}: ${entryPath}`}
             />
+          )}
           </div>
+        </section>
+        <div className="min-h-0 flex-1 sm:w-1/2">
+          <OutputPanel
+            output={output}
+            loading={executing}
+            error={executionError}
+            errorKind={errorKind}
+            streaming={streaming}
+            onClear={reset}
+            onRetry={handleExecute}
+            runKeys={[mod, 'Enter']}
+          />
         </div>
+      </main>
 
-        {/* Output Panel */}
-        <div className="w-1/2">
-          <div className="h-full flex flex-col">
-            <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
-              <h2 className="text-sm font-medium text-gray-300">Output</h2>
-            </div>
-            <div className="flex-1 min-h-0">
-              <OutputPanel
-                output={output}
-                loading={executing}
-                error={executionError}
-                streaming={streaming}
-                streamEvents={streamEvents}
-                onClear={resetExecution}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer - Attribution */}
-      <footer className="bg-gray-900 border-t border-gray-800 px-4 py-2">
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>Powered by 킹세종 Playground</span>
-          <a
-            href={`/?share=${shareId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Open in full editor →
-          </a>
-        </div>
+      <footer className="flex h-9 shrink-0 items-center justify-between gap-3 border-t border-hair bg-surface px-3 text-xs text-fg-muted">
+        <span className="truncate">{t('embed.poweredBy')}</span>
+        <a href={fullEditorHref} target="_blank" rel="noopener noreferrer" className={buttonClass({ variant: 'ghost', size: 'sm', className: 'h-7 px-2 text-xs text-accent-text' })}>
+          {t('embed.openFull')}
+          <ExternalLink className="size-3.5" aria-hidden="true" />
+        </a>
       </footer>
     </div>
   );
@@ -196,16 +205,7 @@ function EmbedContent() {
 
 export default function EmbedPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p>Loading...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="h-dvh bg-void" aria-busy="true" />}>
       <EmbedContent />
     </Suspense>
   );

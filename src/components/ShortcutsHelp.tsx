@@ -1,214 +1,88 @@
 /**
- * Keyboard shortcuts help modal.
- * Displays all available keyboard shortcuts.
+ * Keyboard shortcuts help dialog, grouped by task. Key names follow the platform
+ * (⌘ on macOS, Ctrl elsewhere).
  */
 
 'use client';
 
-import { useEffect } from 'react';
-import { getModifierKeyName, formatShortcut } from '@/hooks/useKeyboardShortcut';
+import { useTranslations } from 'next-intl';
+import { Dialog } from '@/components/ui/Dialog';
+import { Kbd, KeyCombo, useModifierKey } from '@/components/ui/Kbd';
 
 interface ShortcutsHelpProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface Shortcut {
-  keys: string;
-  description: string;
-  category: string;
-}
+type Group = 'execution' | 'editor' | 'panels' | 'view';
 
 export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
-  const modKey = getModifierKeyName();
+  const t = useTranslations('shortcuts');
+  const mod = useModifierKey();
 
-  const shortcuts: Shortcut[] = [
-    // Execution
+  const groups: { group: Group; items: { keys: string[]; label: string }[] }[] = [
     {
-      category: 'Execution',
-      keys: formatShortcut('Enter', { ctrl: true }),
-      description: 'Run code',
+      group: 'execution',
+      items: [
+        { keys: [mod, 'Enter'], label: t('run') },
+        { keys: [mod, 'K'], label: t('clear') },
+      ],
     },
     {
-      category: 'Execution',
-      keys: formatShortcut('k', { ctrl: true }),
-      description: 'Clear output',
-    },
-    // Editor
-    {
-      category: 'Editor',
-      keys: formatShortcut('F', { ctrl: true, shift: true }),
-      description: 'Format code',
-    },
-    // Windows & Panels
-    {
-      category: 'Windows & Panels',
-      keys: formatShortcut(',', { ctrl: true }),
-      description: 'Open settings',
+      group: 'editor',
+      items: [
+        { keys: [mod, 'Shift', 'F'], label: t('format') },
+        { keys: [mod, 'S'], label: t('share') },
+        // Monaco keeps Tab for indentation; this is its built-in escape hatch for keyboard users.
+        { keys: mod === '⌘' ? ['Ctrl', 'Shift', 'M'] : ['Ctrl', 'M'], label: t('tabFocus') },
+      ],
     },
     {
-      category: 'Windows & Panels',
-      keys: formatShortcut('h', { ctrl: true }),
-      description: 'Toggle history',
+      group: 'panels',
+      items: [
+        { keys: [mod, 'T'], label: t('templates') },
+        { keys: [mod, 'L'], label: t('snippets') },
+        { keys: [mod, 'H'], label: t('history') },
+        { keys: [mod, 'F'], label: t('fileTree') },
+        { keys: [mod, ','], label: t('settings') },
+        { keys: ['?'], label: t('help') },
+        { keys: ['Esc'], label: t('closeDialog') },
+      ],
     },
     {
-      category: 'Windows & Panels',
-      keys: formatShortcut('f', { ctrl: true }),
-      description: 'Toggle file tree',
-    },
-    {
-      category: 'Windows & Panels',
-      keys: formatShortcut('t', { ctrl: true }),
-      description: 'Open template gallery',
-    },
-    {
-      category: 'Windows & Panels',
-      keys: formatShortcut('l', { ctrl: true }),
-      description: 'Open snippet library',
-    },
-    {
-      category: 'Windows & Panels',
-      keys: '?',
-      description: 'Show keyboard shortcuts',
-    },
-    {
-      category: 'Windows & Panels',
-      keys: 'Escape',
-      description: 'Close modal/dialog',
-    },
-    // Sharing & Files
-    {
-      category: 'Sharing & Files',
-      keys: formatShortcut('s', { ctrl: true }),
-      description: 'Share code',
-    },
-    // View & Theme
-    {
-      category: 'View & Theme',
-      keys: formatShortcut('/', { ctrl: true }),
-      description: 'Toggle dark/light theme',
-    },
-    {
-      category: 'View & Theme',
-      keys: formatShortcut('b', { ctrl: true }),
-      description: 'Toggle layout orientation',
+      group: 'view',
+      items: [
+        { keys: [mod, '/'], label: t('theme') },
+        { keys: [mod, 'B'], label: t('layout') },
+      ],
     },
   ];
 
-  // Group shortcuts by category
-  const groupedShortcuts = shortcuts.reduce((acc, shortcut) => {
-    if (!acc[shortcut.category]) {
-      acc[shortcut.category] = [];
-    }
-    acc[shortcut.category].push(shortcut);
-    return acc;
-  }, {} as Record<string, Shortcut[]>);
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-      onClick={onClose}
-      role="dialog"
-      aria-labelledby="shortcuts-title"
-      aria-modal="true"
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      title={t('title')}
+      description={t.rich('toggleHint', { key: () => <Kbd>?</Kbd> })}
+      size="lg"
     >
-      <div
-        className="rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
-        style={{ backgroundColor: 'var(--editor-zone)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--border-hair)' }}>
-          <h2 id="shortcuts-title" className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Keyboard Shortcuts</h2>
-          <button
-            onClick={onClose}
-            className="transition-colors"
-            style={{ color: 'var(--text-whisper)' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-whisper)'}
-            aria-label="Close shortcuts help"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {Object.entries(groupedShortcuts).map(([category, items]) => (
-            <div key={category}>
-              <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-whisper)' }}>
-                {category}
-              </h3>
-              <div className="space-y-2">
-                {items.map((shortcut, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between py-2 px-3 rounded transition-colors"
-                    style={{ backgroundColor: 'rgba(42, 42, 53, 0.3)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 42, 53, 0.5)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 42, 53, 0.3)'}
-                  >
-                    <span style={{ color: 'var(--text-primary)' }}>{shortcut.description}</span>
-                    <kbd
-                      className="px-3 py-1.5 text-sm font-mono font-semibold rounded shadow-sm"
-                      style={{
-                        color: 'var(--text-primary)',
-                        backgroundColor: 'var(--bg-void)',
-                        border: '1px solid var(--border-hair)'
-                      }}
-                    >
-                      {shortcut.keys}
-                    </kbd>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6" style={{ borderTop: '1px solid var(--border-hair)' }}>
-          <p className="text-sm text-center" style={{ color: 'var(--text-whisper)' }}>
-            Press <kbd
-              className="px-2 py-1 text-xs font-mono rounded"
-              style={{
-                backgroundColor: 'var(--bg-void)',
-                border: '1px solid var(--border-hair)'
-              }}
-            >?</kbd> to toggle this help
-          </p>
-        </div>
+      <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+        {groups.map(({ group, items }) => (
+          <section key={group}>
+            <h3 className="mb-2 text-xs font-semibold text-fg-muted">{t(group)}</h3>
+            <dl className="divide-y divide-hair">
+              {items.map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-4 py-2">
+                  <dt className="text-sm text-fg">{item.label}</dt>
+                  <dd className="shrink-0">
+                    <KeyCombo keys={item.keys} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
       </div>
-    </div>
+    </Dialog>
   );
 }

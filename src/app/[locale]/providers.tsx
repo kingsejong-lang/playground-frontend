@@ -1,6 +1,6 @@
 'use client';
 
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/features/auth/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 

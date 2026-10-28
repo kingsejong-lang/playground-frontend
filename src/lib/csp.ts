@@ -1,186 +1,70 @@
 /**
- * Content Security Policy (CSP) utilities
+ * Content Security Policy and route-dependent security headers.
+ * Applied per request by src/proxy.ts (nonce-based, see docs/specs/04-security-hardening).
  *
- * CSP helps prevent XSS attacks by controlling which resources can be loaded
+ * Usage:
+ *   const policy = buildCsp({ nonce, isDev: false, apiOrigin: 'https://api.example.com', embed: false });
  */
 
-export interface CSPDirectives {
-  'default-src'?: string[];
-  'script-src'?: string[];
-  'style-src'?: string[];
-  'img-src'?: string[];
-  'font-src'?: string[];
-  'connect-src'?: string[];
-  'worker-src'?: string[];
-  'frame-src'?: string[];
-  'frame-ancestors'?: string[];
-  'base-uri'?: string[];
-  'form-action'?: string[];
-  'object-src'?: string[];
-  'media-src'?: string[];
-  'manifest-src'?: string[];
-  'upgrade-insecure-requests'?: boolean;
-  'block-all-mixed-content'?: boolean;
+/** Monaco is loaded at runtime by @monaco-editor/loader from this CDN. */
+export const MONACO_CDN = 'https://cdn.jsdelivr.net';
+
+export interface CspOptions {
+  nonce: string;
+  isDev: boolean;
+  /** Origin of the Connect gateway (NEXT_PUBLIC_API_URL). */
+  apiOrigin: string;
+  /** True for /[locale]/embed/* which is designed to be framed by other sites. */
+  embed: boolean;
 }
 
-/**
- * Generate CSP header value from directives
- */
-export function generateCSP(directives: CSPDirectives): string {
-  const policies: string[] = [];
-
-  for (const [directive, value] of Object.entries(directives)) {
-    if (typeof value === 'boolean') {
-      if (value) {
-        policies.push(directive);
-      }
-    } else if (Array.isArray(value) && value.length > 0) {
-      policies.push(`${directive} ${value.join(' ')}`);
-    }
+/** Returns the origin (scheme://host[:port]) of a URL, or the input if it is not a URL. */
+export function toOrigin(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url;
   }
-
-  return policies.join('; ');
 }
 
-/**
- * Development CSP - More permissive for HMR and debugging
- */
-export function getDevelopmentCSP(): CSPDirectives {
-  return {
+export function buildCsp({ nonce, isDev, apiOrigin, embed }: CspOptions): string {
+  const api = toOrigin(apiOrigin);
+  const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
-    'script-src': [
-      "'self'",
-      "'unsafe-eval'", // Required for Next.js HMR
-      "'unsafe-inline'", // Required for Monaco Editor
-      'https://cdn.jsdelivr.net', // Monaco Editor CDN
-    ],
-    'style-src': [
-      "'self'",
-      "'unsafe-inline'", // Required for Monaco Editor and Tailwind
-      'https://cdn.jsdelivr.net', // Monaco Editor CDN styles
-      'https://fonts.googleapis.com', // Google Fonts
-    ],
-    'img-src': [
-      "'self'",
-      'data:', // Data URLs for images
-      'https:', // Allow HTTPS images
-    ],
-    'font-src': [
-      "'self'",
-      'data:', // Data URLs for fonts
-      'https://cdn.jsdelivr.net', // Monaco Editor fonts
-      'https://fonts.gstatic.com', // Google Fonts
-    ],
-    'connect-src': [
-      "'self'",
-      'http://localhost:8080', // Backend API
-      'ws://localhost:3000', // Next.js HMR WebSocket
-      'ws://localhost:8080', // Backend WebSocket
-      'wss://localhost:8080', // Backend WebSocket (if using wss)
-      'https://cdn.jsdelivr.net', // Monaco Editor source maps
-    ],
-    'worker-src': [
-      "'self'",
-      'blob:', // Monaco Editor workers
-    ],
+    // 'strict-dynamic': scripts loaded by nonce'd scripts (Monaco's loader) are trusted;
+    // host allow-lists are ignored by CSP3 browsers. React dev tooling needs eval in dev only.
+    'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(isDev ? ["'unsafe-eval'"] : [])],
+    // Monaco and React style attributes inject inline styles.
+    'style-src': ["'self'", "'unsafe-inline'", MONACO_CDN],
+    'img-src': ["'self'", 'data:', 'blob:'],
+    'font-src': ["'self'", 'data:', MONACO_CDN],
+    'connect-src': ["'self'", api, MONACO_CDN, ...(isDev ? ['ws://localhost:3000', 'ws://127.0.0.1:3000'] : [])],
+    'worker-src': ["'self'", 'blob:'],
     'frame-src': ["'none'"],
-    'frame-ancestors': ["'none'"],
+    'frame-ancestors': embed ? ['*'] : ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
     'object-src': ["'none'"],
+    'manifest-src': ["'self'"],
   };
+  const parts = Object.entries(directives).map(([k, v]) => `${k} ${[...new Set(v)].join(' ')}`);
+  if (!isDev) parts.push('upgrade-insecure-requests');
+  return parts.join('; ');
 }
 
-/**
- * Production CSP - Strict security policies
- */
-export function getProductionCSP(): CSPDirectives {
-  return {
-    'default-src': ["'self'"],
-    'script-src': [
-      "'self'",
-      "'unsafe-eval'", // Monaco Editor requires eval
-      'https://cdn.jsdelivr.net', // Monaco Editor CDN
-    ],
-    'style-src': [
-      "'self'",
-      "'unsafe-inline'", // Monaco Editor and Tailwind require inline styles
-      'https://cdn.jsdelivr.net', // Monaco Editor CDN styles
-      'https://fonts.googleapis.com', // Google Fonts
-    ],
-    'img-src': [
-      "'self'",
-      'data:',
-      'https:',
-    ],
-    'font-src': [
-      "'self'",
-      'data:',
-      'https://cdn.jsdelivr.net',
-      'https://fonts.gstatic.com', // Google Fonts
-    ],
-    'connect-src': [
-      "'self'",
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080', // Backend API
-      'https://cdn.jsdelivr.net', // Monaco Editor source maps
-    ],
-    'worker-src': [
-      "'self'",
-      'blob:', // Monaco Editor workers
-    ],
-    'frame-src': ["'none'"],
-    'frame-ancestors': ["'none'"],
-    'base-uri': ["'self'"],
-    'form-action': ["'self'"],
-    'object-src': ["'none'"],
-    'upgrade-insecure-requests': true,
-    'block-all-mixed-content': true,
-  };
+/** Headers that depend on the route. X-XSS-Protection is intentionally absent (deprecated). */
+export function routeSecurityHeaders(embed: boolean): Record<string, string> {
+  return embed ? {} : { 'X-Frame-Options': 'DENY' };
 }
 
-/**
- * Get CSP directives based on environment
- */
-export function getCSP(): CSPDirectives {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  return isDevelopment ? getDevelopmentCSP() : getProductionCSP();
+/** True for /<locale>/embed/<id> paths. */
+export function isEmbedPath(pathname: string): boolean {
+  return /^\/(?:[a-z]{2}\/)?embed(?:\/|$)/.test(pathname);
 }
 
-/**
- * Get CSP header value for current environment
- */
-export function getCSPHeader(): string {
-  return generateCSP(getCSP());
-}
-
-/**
- * Additional security headers
- */
-export function getSecurityHeaders() {
-  return [
-    {
-      key: 'Content-Security-Policy',
-      value: getCSPHeader(),
-    },
-    {
-      key: 'X-Frame-Options',
-      value: 'DENY',
-    },
-    {
-      key: 'X-Content-Type-Options',
-      value: 'nosniff',
-    },
-    {
-      key: 'X-XSS-Protection',
-      value: '1; mode=block',
-    },
-    {
-      key: 'Referrer-Policy',
-      value: 'strict-origin-when-cross-origin',
-    },
-    {
-      key: 'Permissions-Policy',
-      value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-    },
-  ];
+export function generateNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
 }

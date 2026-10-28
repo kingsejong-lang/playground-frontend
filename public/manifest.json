@@ -1,27 +1,19 @@
 {
-  "name": "Kingsejong Playground",
-  "short_name": "Kingsejong",
-  "description": "Interactive playground for Kingsejong programming language",
-  "start_url": "/",
+  "name": "킹세종 Playground",
+  "short_name": "킹세종",
+  "description": "킹세종, 파이썬, Go 프로그램을 브라우저에서 작성하고 실행하고 공유하세요.",
+  "start_url": "/ko",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#030712",
-  "theme_color": "#3b82f6",
-  "orientation": "portrait-primary",
+  "background_color": "#0a0a0e",
+  "theme_color": "#12121a",
   "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "categories": ["development", "productivity", "education"],
-  "lang": "en-US",
+  "categories": ["developer", "education", "productivity"],
+  "lang": "ko",
   "dir": "ltr"
 }

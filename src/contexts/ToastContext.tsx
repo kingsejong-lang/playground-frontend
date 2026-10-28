@@ -1,76 +1,63 @@
 /**
  * Toast context for managing toast notifications across the app.
+ *
+ * Usage:
+ *   const toast = useToast();
+ *   toast.success('저장했어요');
+ *   toast.info('템플릿을 불러왔어요', { action: { label: '되돌리기', onClick: undo } });
  */
 
-'use client'
+'use client';
 
-import { createContext, useState, useCallback, ReactNode } from 'react'
-import { ToastContainer } from '@/components/Toast'
-import type { ToastType } from '@/components/Toast'
+import { createContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+import { ToastContainer } from '@/components/Toast';
+import type { ToastAction, ToastItem, ToastType } from '@/components/Toast';
 
-interface Toast {
-  id: string
-  type: ToastType
-  message: string
-  duration?: number
+export interface ToastOptions {
+  duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  showToast: (type: ToastType, message: string, duration?: number) => void
-  success: (message: string, duration?: number) => void
-  error: (message: string, duration?: number) => void
-  warning: (message: string, duration?: number) => void
-  info: (message: string, duration?: number) => void
+  showToast: (type: ToastType, message: string, options?: ToastOptions) => void;
+  success: (message: string, options?: ToastOptions) => void;
+  error: (message: string, options?: ToastOptions) => void;
+  warning: (message: string, options?: ToastOptions) => void;
+  info: (message: string, options?: ToastOptions) => void;
 }
 
-export const ToastContext = createContext<ToastContextValue | undefined>(undefined)
+export const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+
+/** At most this many toasts are visible; older ones are dropped. */
+const MAX_TOASTS = 4;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const showToast = useCallback((type: ToastType, message: string, duration?: number) => {
-    const id = Math.random().toString(36).substring(2, 9)
-    const newToast: Toast = { id, type, message, duration }
-
-    setToasts((prev) => [...prev, newToast])
-  }, [])
+  const showToast = useCallback((type: ToastType, message: string, options: ToastOptions = {}) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, message, ...options }].slice(-MAX_TOASTS));
+  }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-  }, [])
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
-  const success = useCallback(
-    (message: string, duration?: number) => showToast('success', message, duration),
+  const value = useMemo<ToastContextValue>(
+    () => ({
+      showToast,
+      success: (message, options) => showToast('success', message, options),
+      error: (message, options) => showToast('error', message, options),
+      warning: (message, options) => showToast('warning', message, options),
+      info: (message, options) => showToast('info', message, options),
+    }),
     [showToast]
-  )
-
-  const error = useCallback(
-    (message: string, duration?: number) => showToast('error', message, duration),
-    [showToast]
-  )
-
-  const warning = useCallback(
-    (message: string, duration?: number) => showToast('warning', message, duration),
-    [showToast]
-  )
-
-  const info = useCallback(
-    (message: string, duration?: number) => showToast('info', message, duration),
-    [showToast]
-  )
-
-  const value: ToastContextValue = {
-    showToast,
-    success,
-    error,
-    warning,
-    info,
-  }
+  );
 
   return (
     <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </ToastContext.Provider>
-  )
+  );
 }
