@@ -24,6 +24,12 @@ export interface UseFilesReturn {
   getFilesObject: () => Record<string, string>;
   loadFiles: (filesObject: Record<string, string>) => void;
   clearFiles: () => void;
+  /** File chosen as the run entry; null means "use the default rule" (see entry.ts). */
+  entryFileId: string | null;
+  entryFile: FileItem | null;
+  setEntryFile: (id: string | null) => void;
+  /** Replaces the whole workspace (draft restore, shared code); entry/active are file names. */
+  replaceFiles: (files: { name: string; content: string }[], options?: { entry?: string; active?: string }) => void;
 }
 
 /**
@@ -38,9 +44,11 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
     },
   ]);
   const [activeFileId, setActiveFileId] = useState<string | null>(files[0]?.id || null);
+  const [entryFileId, setEntryFileId] = useState<string | null>(null);
 
   // Get active file
   const activeFile = files.find(f => f.id === activeFileId) || null;
+  const entryFile = files.find(f => f.id === entryFileId) || null;
 
   // Add new file
   const addFile = useCallback((name: string, content: string = '') => {
@@ -69,6 +77,9 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
         setActiveFileId(defaultFile.id);
         return [defaultFile];
       }
+
+      // A deleted entry falls back to the default rule.
+      setEntryFileId((current) => (current === id ? null : current));
 
       // If active file was deleted, switch to first file
       if (id === activeFileId) {
@@ -132,6 +143,21 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
     setActiveFileId(defaultFile.id);
   }, []);
 
+  const setEntryFile = useCallback((id: string | null) => {
+    setEntryFileId(id);
+  }, []);
+
+  const replaceFiles = useCallback(
+    (next: { name: string; content: string }[], options: { entry?: string; active?: string } = {}) => {
+      if (next.length === 0) return;
+      const items = next.map((f) => ({ id: generateId('file'), name: f.name, content: f.content }));
+      setFiles(items);
+      setActiveFileId((items.find((f) => f.name === options.active) ?? items[0]).id);
+      setEntryFileId(items.find((f) => f.name === options.entry)?.id ?? null);
+    },
+    []
+  );
+
   return {
     files,
     activeFileId,
@@ -144,6 +170,10 @@ export function useFiles(initialFileName: string = 'main.ksj', initialContent: s
     getFilesObject,
     loadFiles,
     clearFiles,
+    entryFileId,
+    entryFile,
+    setEntryFile,
+    replaceFiles,
   };
 }
 

@@ -354,3 +354,42 @@ describe('useFiles', () => {
   })
 
 })
+
+describe('useFiles entry file', () => {
+  it('has no explicit entry until one is chosen', () => {
+    const { result } = renderHook(() => useFiles())
+    expect(result.current.entryFileId).toBeNull()
+  })
+
+  it('sets and clears the entry file', () => {
+    const { result } = renderHook(() => useFiles())
+    act(() => {
+      result.current.addFile('util.ksj')
+    })
+    const util = result.current.files[1]
+    act(() => {
+      result.current.setEntryFile(util.id)
+    })
+    expect(result.current.entryFile?.name).toBe('util.ksj')
+    act(() => {
+      result.current.deleteFile(util.id)
+    })
+    expect(result.current.entryFileId).toBeNull()
+  })
+
+  it('replaces the workspace with entry and active file by name', () => {
+    const { result } = renderHook(() => useFiles())
+    act(() => {
+      result.current.replaceFiles(
+        [
+          { name: 'a.py', content: '1' },
+          { name: 'main.py', content: '2' },
+        ],
+        { entry: 'main.py', active: 'a.py' }
+      )
+    })
+    expect(result.current.files.map((f) => f.name)).toEqual(['a.py', 'main.py'])
+    expect(result.current.entryFile?.name).toBe('main.py')
+    expect(result.current.activeFile?.name).toBe('a.py')
+  })
+})
