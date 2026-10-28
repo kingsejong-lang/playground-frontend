@@ -17,16 +17,22 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/hooks/useToast';
 import { useFailureText } from '@/hooks/useFailureText';
 import { assertFilesFit, assertValid, RpcFailureError, useRpc } from '@/lib/rpc';
-import { getMainFilename, resolveLanguage } from '@/lib/utils/language';
-import { firstFileContent } from '@/features/editor/templates';
+import { resolveLanguage } from '@/lib/utils/language';
+import { buildRunFiles, type EntryOptions } from '@/features/editor/entry';
 
 interface UseShareReturn {
   shareUrl: string | null;
   shareId: string | null;
   sharing: boolean;
   error: string | null;
-  createShare: (code: string, language: string, languages: readonly Language[]) => Promise<void>;
-  loadShared: (shareId: string, onLoad: (language: string, code: string) => void) => Promise<void>;
+  /** Shares every workspace file with the resolved entry file (see editor/entry.ts). */
+  createShare: (
+    files: readonly { name: string; content: string }[],
+    entry: Pick<EntryOptions, 'preferred'>,
+    language: string,
+    languages: readonly Language[]
+  ) => Promise<void>;
+  loadShared: (shareId: string, onLoad: (language: string, files: { name: string; content: string }[], entryFile: string) => void) => Promise<void>;
   copyToClipboard: () => Promise<void>;
   closeShareModal: () => void;
 }
@@ -52,8 +58,13 @@ export function useShare(): UseShareReturn {
   const [error, setError] = useState<string | null>(null);
 
   const createShare = useCallback(
-    async (code: string, language: string, languages: readonly Language[]) => {
-      if (!code.trim()) {
+    async (
+      workspace: readonly { name: string; content: string }[],
+      entry: Pick<EntryOptions, 'preferred'>,
+      language: string,
+      languages: readonly Language[]
+    ) => {
+      if (!workspace.some((f) => f.content.trim())) {
         setError(t('errors.emptyCode'));
         return;
       }
@@ -69,11 +80,11 @@ export function useShare(): UseShareReturn {
       setError(null);
 
       try {
-        const path = getMainFilename(lang);
+        const run = buildRunFiles(workspace, { preferred: entry.preferred, defaultEntryFile: lang.defaultEntryFile });
         const request = create(CreateShareRequestSchema, {
           languageId: language,
-          files: { files: [{ path, content: code }] },
-          entryFile: path,
+          files: { files: run.files },
+          entryFile: run.entryFile ?? '',
           title: `${lang.displayName || lang.id} Code`,
           description: 'Shared from Kingsejong Playground',
         });
@@ -104,11 +115,12 @@ export function useShare(): UseShareReturn {
   );
 
   const loadShared = useCallback(
-    async (id: string, onLoad: (language: string, code: string) => void) => {
+    async (id: string, onLoad: (language: string, files: { name: string; content: string }[], entryFile: string) => void) => {
       try {
         setError(null);
         const share = await fetchShare(api, id);
-        onLoad(share.languageId, firstFileContent(share.files?.files ?? [], share.entryFile));
+        const files = (share.files?.files ?? []).map((f) => ({ name: f.path, content: f.content }));
+        onLoad(share.languageId, files, share.entryFile);
       } catch (err) {
         setError(`${t('errors.loadShare')} ${failureText(err)}`);
       }

@@ -1,6 +1,7 @@
 /**
- * Keyboard shortcuts help dialog, grouped by task. Key names follow the platform
- * (⌘ on macOS, Ctrl elsewhere).
+ * Keyboard shortcuts help dialog. Lists only the global shortcuts (see
+ * features/editor/shortcuts.ts) and the editor's own keys; everything else is
+ * in the header menu and the command palette (F1).
  */
 
 'use client';
@@ -8,52 +9,34 @@
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/Dialog';
 import { Kbd, KeyCombo, useModifierKey } from '@/components/ui/Kbd';
+import { GLOBAL_SHORTCUTS, shortcutKeys } from '@/features/editor/shortcuts';
 
 interface ShortcutsHelpProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type Group = 'execution' | 'editor' | 'panels' | 'view';
-
 export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
   const t = useTranslations('shortcuts');
   const mod = useModifierKey();
 
-  const groups: { group: Group; items: { keys: string[]; label: string }[] }[] = [
+  const groups: { group: 'global' | 'inEditor'; items: { keys: string[]; label: string }[] }[] = [
     {
-      group: 'execution',
+      group: 'global',
       items: [
-        { keys: [mod, 'Enter'], label: t('run') },
-        { keys: [mod, 'K'], label: t('clear') },
-      ],
-    },
-    {
-      group: 'editor',
-      items: [
-        { keys: [mod, 'Shift', 'F'], label: t('format') },
-        { keys: [mod, 'S'], label: t('share') },
-        // Monaco keeps Tab for indentation; this is its built-in escape hatch for keyboard users.
-        { keys: mod === '⌘' ? ['Ctrl', 'Shift', 'M'] : ['Ctrl', 'M'], label: t('tabFocus') },
-      ],
-    },
-    {
-      group: 'panels',
-      items: [
-        { keys: [mod, 'T'], label: t('templates') },
-        { keys: [mod, 'L'], label: t('snippets') },
-        { keys: [mod, 'H'], label: t('history') },
-        { keys: [mod, 'F'], label: t('fileTree') },
-        { keys: [mod, ','], label: t('settings') },
+        { keys: shortcutKeys(GLOBAL_SHORTCUTS.run, mod), label: t('run') },
+        { keys: shortcutKeys(GLOBAL_SHORTCUTS.stop, mod), label: t('stop') },
+        { keys: shortcutKeys(GLOBAL_SHORTCUTS.save, mod), label: t('save') },
         { keys: ['?'], label: t('help') },
         { keys: ['Esc'], label: t('closeDialog') },
       ],
     },
     {
-      group: 'view',
+      group: 'inEditor',
       items: [
-        { keys: [mod, '/'], label: t('theme') },
-        { keys: [mod, 'B'], label: t('layout') },
+        { keys: ['F1'], label: t('palette') },
+        // Monaco keeps Tab for indentation; this is its built-in escape hatch for keyboard users.
+        { keys: mod === '⌘' ? ['Ctrl', 'Shift', 'M'] : ['Ctrl', 'M'], label: t('tabFocus') },
       ],
     },
   ];
@@ -64,9 +47,9 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
       onClose={onClose}
       title={t('title')}
       description={t.rich('toggleHint', { key: () => <Kbd>?</Kbd> })}
-      size="lg"
+      size="md"
     >
-      <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+      <div className="space-y-6">
         {groups.map(({ group, items }) => (
           <section key={group}>
             <h3 className="mb-2 text-xs font-semibold text-fg-muted">{t(group)}</h3>
@@ -82,6 +65,7 @@ export function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
             </dl>
           </section>
         ))}
+        <p className="text-sm text-fg-muted">{t('menuNote')}</p>
       </div>
     </Dialog>
   );

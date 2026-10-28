@@ -83,4 +83,38 @@ describe('useCodeExecution', () => {
   it('generates idempotency keys in the contract alphabet', () => {
     expect(newClientRequestId()).toMatch(/^[A-Za-z0-9_-]{22}$/);
   });
+
+  it('runs every workspace file with the chosen entry file', async () => {
+    const { result, runSpy } = setup(async function* () {
+      yield { seq: 1n, event: { case: 'finished', value: { status: ExecutionStatus.SUCCEEDED, exitCode: 0 } } };
+    });
+    const files = [
+      { name: 'main.ksj', content: '출력(1)' },
+      { name: 'util.ksj', content: '출력(2)' },
+    ];
+    await act(() => result.current.runWorkspace(files, { preferred: 'util.ksj' }, 'kingsejong', languages));
+    const req = runSpy.mock.calls[0][0] as { files: { files: { path: string }[] }; entryFile: string };
+    expect(req.files.files.map((f) => f.path)).toEqual(['main.ksj', 'util.ksj']);
+    expect(req.entryFile).toBe('util.ksj');
+  });
+
+  it("defaults the entry to the language's defaultEntryFile, else the first file", async () => {
+    const { result, runSpy } = setup(async function* () {
+      yield { seq: 1n, event: { case: 'finished', value: { status: ExecutionStatus.SUCCEEDED, exitCode: 0 } } };
+    });
+    await act(() =>
+      result.current.runWorkspace(
+        [
+          { name: 'a.ksj', content: 'x' },
+          { name: 'main.ksj', content: 'y' },
+        ],
+        {},
+        'kingsejong',
+        languages
+      )
+    );
+    expect((runSpy.mock.calls[0][0] as { entryFile: string }).entryFile).toBe('main.ksj');
+    await act(() => result.current.runWorkspace([{ name: 'z.ksj', content: 'x' }], { preferred: 'gone.ksj' }, 'kingsejong', languages));
+    expect((runSpy.mock.calls[1][0] as { entryFile: string }).entryFile).toBe('z.ksj');
+  });
 });

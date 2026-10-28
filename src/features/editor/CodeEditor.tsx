@@ -1,7 +1,7 @@
 'use client';
 
 import { Editor, type BeforeMount, type OnMount, loader } from '@monaco-editor/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { editor as MonacoEditor } from 'monaco-editor';
 import type { DiagnosticView } from '@/lib/rpc';
 import { registerKingsejongLanguage, kingsejongLanguageId } from '@/features/editor/monaco/kingsejong-language';
@@ -18,6 +18,20 @@ if (typeof window !== 'undefined') {
 }
 
 export type EditorThemeName = 'code-sanctuary-dark' | 'code-sanctuary-light' | 'hc-black' | 'hc-light';
+
+/**
+ * A playground command offered in the editor's command palette (F1) and, when
+ * `key` is set, bound to the matching global shortcut inside the editor (Monaco
+ * consumes the key there, so the window-level shortcut does not fire twice).
+ */
+export interface EditorCommand {
+  id: string;
+  label: string;
+  run: () => void;
+  key?: 'run' | 'stop' | 'save';
+  /** Also shown in the editor's right-click menu. */
+  contextMenu?: boolean;
+}
 
 /** A request to move the cursor; `nonce` makes repeated jumps to the same place work. */
 export interface RevealRequest {
@@ -36,7 +50,8 @@ interface CodeEditorProps {
   tabSize?: number;
   minimap?: boolean;
   theme?: EditorThemeName;
-  onFormat?: () => void;
+  /** Playground commands for the command palette (F1); see EditorCommand. */
+  commands?: readonly EditorCommand[];
   /** Accessible name of the editor textarea. */
   ariaLabel?: string;
   /** Diagnostics for this file, drawn as squiggles. */
@@ -143,7 +158,7 @@ export default function CodeEditor({
   tabSize = 2,
   minimap = true,
   theme = 'code-sanctuary-dark',
-  onFormat,
+  commands,
   ariaLabel,
   diagnostics,
   reveal,
@@ -151,10 +166,13 @@ export default function CodeEditor({
   const isKingsejongRegistered = useRef(false);
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
-  const onFormatRef = useRef(onFormat);
+  const [ready, setReady] = useState(false);
+  const commandsRef = useRef(commands);
   useEffect(() => {
-    onFormatRef.current = onFormat;
-  }, [onFormat]);
+    commandsRef.current = commands;
+  }, [commands]);
+  // Re-register only when the set of commands or their labels change (e.g. locale).
+  const commandSignature = (commands ?? []).map((c) => `${c.id}:${c.label}:${c.key ?? ''}`).join('|');
 
   // Themes must exist before the editor is created; defining them in onMount
   // left the first render on Monaco's default light theme.
@@ -175,15 +193,31 @@ export default function CodeEditor({
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    if (onFormat) {
-      editor.addAction({
-        id: 'format-code',
-        label: 'Format Code',
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF],
-        run: () => onFormatRef.current?.(),
-      });
-    }
+    setReady(true);
   };
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    if (!ready || !editor || !monaco) return;
+    const keys = {
+      run: monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      stop: monaco.KeyMod.CtrlCmd | monaco.KeyCode.Period,
+      save: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+    };
+    const disposables = (commandsRef.current ?? []).map((c, order) =>
+      editor.addAction({
+        id: `playground.${c.id}`,
+        label: c.label,
+        keybindings: c.key ? [keys[c.key]] : undefined,
+        contextMenuGroupId: c.contextMenu ? 'playground' : undefined,
+        contextMenuOrder: order,
+        run: () => commandsRef.current?.find((x) => x.id === c.id)?.run(),
+      })
+    );
+    return () => disposables.forEach((d) => d.dispose());
+    // commandSignature captures every change that needs re-registration.
+  }, [ready, commandSignature]);
 
   // Diagnostics become editor markers (squiggles + hover message).
   useEffect(() => {

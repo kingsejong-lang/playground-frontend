@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileCode2, PanelLeft, Plus, X } from 'lucide-react';
+import { Check, FileCode2, PanelLeft, Play, Plus, X } from 'lucide-react';
+import { FileMenu, useFileMenu } from './FileMenu';
 import { FileItem } from '@/features/editor/useFiles';
 import { IconButton } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
@@ -17,6 +18,11 @@ interface FileTabsProps {
   /** Shows the file-list toggle when given. */
   onToggleFileTree?: () => void;
   fileTreeOpen?: boolean;
+  /** The file runs start from (resolved, see entry.ts); marked when there are several files. */
+  entryFileId?: string | null;
+  onSetEntry?: (id: string) => void;
+  /** Quiet confirmation of the last local draft save, e.g. "임시 저장됨 14:02". */
+  draftStatus?: string | null;
 }
 
 /**
@@ -32,8 +38,14 @@ export default function FileTabs({
   onAddFile,
   onToggleFileTree,
   fileTreeOpen = false,
+  entryFileId = null,
+  onSetEntry,
+  draftStatus,
 }: FileTabsProps) {
+  const menu = useFileMenu();
+  const showEntry = files.length > 1;
   const t = useTranslations('files');
+  const tc = useTranslations('common');
   const toast = useToast();
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renamingValue, setRenamingValue] = useState('');
@@ -113,6 +125,7 @@ export default function FileTabs({
                 <button
                   type="button"
                   onClick={() => onSelectFile(file.id)}
+                  onContextMenu={onSetEntry ? (e) => menu.open(e, file.id) : undefined}
                   onDoubleClick={() => startRename(file)}
                   onKeyDown={(e) => {
                     if (e.key === 'F2') {
@@ -121,11 +134,16 @@ export default function FileTabs({
                     }
                   }}
                   aria-current={isActive ? 'true' : undefined}
-                  title={t('renameHint')}
+                  title={showEntry && file.id === entryFileId ? `${t('entryHint')} · ${t('renameHint')}` : t('renameHint')}
                   className="flex h-full items-center gap-2 pl-3 pr-1 font-mono text-[13px]"
                 >
-                  <FileCode2 className={`size-3.5 shrink-0 ${isActive ? 'text-accent-text' : ''}`} aria-hidden="true" />
+                  {showEntry && file.id === entryFileId ? (
+                    <Play className="size-3.5 shrink-0 fill-current text-accent-text" aria-hidden="true" />
+                  ) : (
+                    <FileCode2 className={`size-3.5 shrink-0 ${isActive ? 'text-accent-text' : ''}`} aria-hidden="true" />
+                  )}
                   <span className="max-w-40 truncate">{file.name}</span>
+                  {showEntry && file.id === entryFileId && <span className="sr-only"> ({t('entry')})</span>}
                 </button>
               )}
               <button
@@ -145,6 +163,26 @@ export default function FileTabs({
       <div className="flex items-center px-1">
         <IconButton label={t('add')} icon={<Plus />} size="sm" onClick={onAddFile} />
       </div>
+      {draftStatus && (
+        <p className="ml-auto flex shrink-0 items-center gap-1.5 pr-3 text-xs text-fg-muted" role="status" aria-live="polite">
+          <Check className="size-3.5" aria-hidden="true" />
+          <span className="max-sm:sr-only">{draftStatus}</span>
+        </p>
+      )}
+      {onSetEntry && (
+        <FileMenu
+          menu={menu}
+          entryFileId={entryFileId}
+          fileName={(id) => files.find((f) => f.id === id)?.name ?? ''}
+          onSetEntry={onSetEntry}
+          onRename={(id) => {
+            const file = files.find((f) => f.id === id);
+            if (file) startRename(file);
+          }}
+          onRemove={closeFile}
+          removeLabel={tc('close')}
+        />
+      )}
     </div>
   );
 }

@@ -30,13 +30,14 @@ const FONT_OPTIONS: { value: string; label: string }[] = [
 
 const FIELD = 'h-9 w-full rounded-md border border-strong bg-void px-3 text-sm text-fg';
 
-function Switch({ id, checked, onChange }: { id: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Switch({ id, checked, onChange, describedBy }: { id: string; checked: boolean; onChange: (v: boolean) => void; describedBy?: string }) {
   return (
     <button
       id={id}
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-describedby={describedBy}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
         checked ? 'border-accent bg-accent' : 'border-strong bg-hover'
@@ -53,7 +54,7 @@ function Switch({ id, checked, onChange }: { id: string; checked: boolean; onCha
 export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, initialTheme, isAuthenticated = false }: SettingsModalProps) {
   const t = useTranslations('settings');
   const tc = useTranslations('common');
-  const ids = { size: useId(), font: useId(), tab: useId(), auto: useId(), minimap: useId(), theme: useId(), scheme: useId() };
+  const ids = { size: useId(), font: useId(), tab: useId(), auto: useId(), autoHint: useId(), minimap: useId(), theme: useId(), scheme: useId() };
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(initialEditor || DEFAULT_EDITOR_SETTINGS);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(initialTheme || DEFAULT_THEME_SETTINGS);
 
@@ -160,11 +161,21 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <label htmlFor={ids.auto} className="text-sm text-fg-secondary">
-              {t('autoSave')}
-            </label>
-            <Switch id={ids.auto} checked={editorSettings.auto_save} onChange={(v) => setEditorSettings({ ...editorSettings, auto_save: v })} />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <label htmlFor={ids.auto} className="text-sm text-fg-secondary">
+                {t('autoSave')}
+              </label>
+              <p id={ids.autoHint} className="mt-0.5 text-xs text-fg-muted">
+                {t('autoSaveHint')}
+              </p>
+            </div>
+            <Switch
+              id={ids.auto}
+              checked={editorSettings.auto_save}
+              onChange={(v) => setEditorSettings({ ...editorSettings, auto_save: v })}
+              describedBy={ids.autoHint}
+            />
           </div>
 
           <div className="flex items-center justify-between">

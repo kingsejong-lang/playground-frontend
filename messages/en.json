@@ -41,7 +41,9 @@
     "more": "More actions",
     "uiLanguage": "Interface language",
     "tools": "Playground tools",
-    "noLanguages": "Languages unavailable"
+    "noLanguages": "Languages unavailable",
+    "saveDraft": "Save draft",
+    "palette": "Command palette"
   },
   "files": {
     "tabs": "Open files",
@@ -58,7 +60,11 @@
     "deleted": "File deleted",
     "lastFile": "Keep at least one file open",
     "empty": "No files yet",
-    "renameHint": "Double-click or press F2 to rename"
+    "renameHint": "Double-click or press F2 to rename",
+    "entry": "Entry file",
+    "setEntry": "Set as entry file",
+    "entryHint": "Runs start from this file",
+    "menu": "{name} menu"
   },
   "editor": {
     "loading": "Loading the editor…",
@@ -267,7 +273,8 @@
     "schemeHighContrast": "High contrast",
     "reset": "Reset to defaults",
     "saveSettings": "Save settings",
-    "syncNote": "Signed-in settings are saved to your account."
+    "syncNote": "Signed-in settings are saved to your account.",
+    "autoSaveHint": "Saves your edits in this browser a second after you stop typing, so you can pick up where you left off."
   },
   "auth": {
     "login": "Sign in",
@@ -283,25 +290,17 @@
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
-    "execution": "Run",
-    "editor": "Editor",
-    "panels": "Panels",
-    "view": "View",
+    "global": "Anywhere",
+    "inEditor": "In the editor",
     "run": "Run code",
-    "clear": "Clear output (stops a run)",
-    "format": "Format code",
-    "settings": "Open settings",
-    "history": "Show or hide history",
-    "fileTree": "Show or hide the file list",
-    "templates": "Open templates",
-    "snippets": "Open snippets",
-    "share": "Share code",
-    "help": "Show keyboard shortcuts",
+    "stop": "Stop the run",
+    "save": "Save a draft in this browser",
+    "help": "Show shortcuts (when not typing)",
+    "palette": "Command palette (templates, history, settings, share, ...)",
+    "tabFocus": "Let Tab leave the editor (toggle)",
     "closeDialog": "Close a dialog",
-    "theme": "Switch light or dark theme",
-    "layout": "Switch layout",
     "toggleHint": "Press <key></key> anywhere outside the editor to open this list.",
-    "tabFocus": "Let Tab leave the editor (toggle)"
+    "menuNote": "Templates, history, settings, share, layout and theme live in the ☰ menu and the command palette (F1). They have no keys of their own so they never clash with browser shortcuts."
   },
   "toast": {
     "formatted": "Code formatted",
@@ -326,5 +325,28 @@
   },
   "time": {
     "justNow": "Just now"
+  },
+  "commands": {
+    "run": "Run code",
+    "runThisFile": "Run this file as the entry file",
+    "stop": "Stop the run",
+    "saveDraft": "Save a draft in this browser",
+    "setEntry": "Set this file as the entry file",
+    "format": "Format code",
+    "templates": "Open templates",
+    "snippets": "Open snippets",
+    "history": "Open run history",
+    "settings": "Open settings",
+    "share": "Share code",
+    "toggleLayout": "Switch editor/output layout",
+    "toggleTheme": "Switch light or dark theme",
+    "toggleFileTree": "Show or hide the file list",
+    "shortcuts": "Show keyboard shortcuts",
+    "clearOutput": "Clear output"
+  },
+  "draft": {
+    "saved": "Draft saved {time}",
+    "savedLong": "Draft saved in this browser at {time}",
+    "restored": "Restored the draft saved in this browser"
   }
 }

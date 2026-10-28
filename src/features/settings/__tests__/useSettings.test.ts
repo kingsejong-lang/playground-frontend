@@ -66,4 +66,16 @@ describe('useSettings', () => {
     expect(updateSettings).not.toHaveBeenCalled();
     expect(result.current.error).toMatch(/font_size/);
   });
+
+  it('keeps an anonymous visitor\'s settings in this browser', async () => {
+    localStorage.clear();
+    const first = setup(false);
+    await act(() => first.result.current.saveSettings({ ...DEFAULT_EDITOR_SETTINGS, auto_save: true, font_size: 18 }, DEFAULT_THEME_SETTINGS));
+    first.unmount();
+    const second = setup(false);
+    await waitFor(() => expect(second.result.current.editorSettings.auto_save).toBe(true));
+    expect(second.result.current.editorSettings.font_size).toBe(18);
+    expect(second.updateSettings).not.toHaveBeenCalled();
+    localStorage.clear();
+  });
 });

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileCode2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { FileCode2, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
+import { FileMenu, useFileMenu } from './FileMenu';
 import { FileItem } from '@/features/editor/useFiles';
 import { Button, IconButton } from '@/components/ui/Button';
 import { useToast } from '@/hooks/useToast';
@@ -16,6 +17,9 @@ interface FileTreeProps {
   onAddFile: () => void;
   onRenameFile: (id: string, newName: string) => void;
   onDeleteFile: (id: string) => void;
+  /** Resolved entry file (see entry.ts). */
+  entryFileId?: string | null;
+  onSetEntry?: (id: string) => void;
 }
 
 /**
@@ -31,7 +35,10 @@ export default function FileTree({
   onAddFile,
   onRenameFile,
   onDeleteFile,
+  entryFileId = null,
+  onSetEntry,
 }: FileTreeProps) {
+  const menu = useFileMenu();
   const t = useTranslations('files');
   const tc = useTranslations('common');
   const toast = useToast();
@@ -121,6 +128,7 @@ export default function FileTree({
                       <button
                         type="button"
                         onClick={() => onSelectFile(file.id)}
+                        onContextMenu={onSetEntry ? (e) => menu.open(e, file.id) : undefined}
                         onDoubleClick={() => startRename(file)}
                         onKeyDown={(e) => {
                           if (e.key === 'F2') {
@@ -131,12 +139,20 @@ export default function FileTree({
                         aria-current={isActive ? 'true' : undefined}
                         className="flex h-8 min-w-0 flex-1 items-center gap-2 px-2 text-left font-mono text-[13px]"
                       >
-                        <FileCode2 className={`size-3.5 shrink-0 ${isActive ? 'text-accent-text' : 'text-fg-muted'}`} aria-hidden="true" />
+                        {file.id === entryFileId ? (
+                          <Play className="size-3.5 shrink-0 fill-current text-accent-text" aria-hidden="true" />
+                        ) : (
+                          <FileCode2 className={`size-3.5 shrink-0 ${isActive ? 'text-accent-text' : 'text-fg-muted'}`} aria-hidden="true" />
+                        )}
                         <span className="truncate">{file.name}</span>
+                        {file.id === entryFileId && <span className="ml-auto shrink-0 pl-2 font-sans text-xs text-fg-muted">{t('entry')}</span>}
                       </button>
                     )}
                     {!isRenaming && (
-                      <span className="flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+                      <span className="flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100">
+                        {onSetEntry && file.id !== entryFileId && (
+                          <IconButton label={`${t('setEntry')}: ${file.name}`} icon={<Play />} size="sm" className="size-7" onClick={() => onSetEntry(file.id)} />
+                        )}
                         <IconButton label={`${tc('rename')}: ${file.name}`} icon={<Pencil />} size="sm" className="size-7" onClick={() => startRename(file)} />
                         <IconButton label={`${tc('delete')}: ${file.name}`} icon={<Trash2 />} size="sm" className="size-7 hover:text-err" onClick={() => deleteFile(file.id)} />
                       </span>
@@ -150,6 +166,20 @@ export default function FileTree({
 
         <p className="border-t border-hair px-4 py-2 text-xs text-fg-muted">{t('count', { count: files.length })}</p>
       </aside>
+      {onSetEntry && (
+        <FileMenu
+          menu={menu}
+          entryFileId={entryFileId}
+          fileName={(id) => files.find((f) => f.id === id)?.name ?? ''}
+          onSetEntry={onSetEntry}
+          onRename={(id) => {
+            const file = files.find((f) => f.id === id);
+            if (file) startRename(file);
+          }}
+          onRemove={deleteFile}
+          removeLabel={tc('delete')}
+        />
+      )}
     </>
   );
 }
