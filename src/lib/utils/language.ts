@@ -1,52 +1,28 @@
 /**
- * Language-related utility functions
+ * Language-related utility functions (contract type: playground.api.v1.Language).
  */
 
-import { Language } from '../api';
+import type { Language } from '@kingsejong-lang/playground-proto';
 import { DEFAULT_FILE_EXTENSION } from '../constants';
 
-/**
- * Find a language by its ID
- * @param languageId - Language ID to find
- * @param languages - Array of available languages
- * @returns Language object or null if not found
- */
-export function resolveLanguage(
-  languageId: string,
-  languages: Language[]
-): Language | null {
+/** Find a language by its ID. */
+export function resolveLanguage(languageId: string, languages: readonly Language[]): Language | null {
   return languages.find((lang) => lang.id === languageId) ?? null;
 }
 
-/**
- * Get the primary file extension for a language
- * @param language - Language object
- * @returns File extension with dot (e.g., ".py")
- */
+/** Primary file extension with a leading dot (e.g. ".py"). */
 export function getLanguageExtension(language: Language): string {
-  return language.extensions[0] || DEFAULT_FILE_EXTENSION;
+  const ext = language.fileExtensions[0];
+  if (!ext) return DEFAULT_FILE_EXTENSION;
+  return ext.startsWith('.') ? ext : `.${ext}`;
 }
 
-/**
- * Get the main filename for a language (e.g., "main.py")
- * @param language - Language object
- * @returns Main filename string
- */
+/** Entry file name: the language's default entry file, else "main<ext>". */
 export function getMainFilename(language: Language): string {
-  const extension = getLanguageExtension(language);
-  return `main${extension}`;
+  return language.defaultEntryFile || `main${getLanguageExtension(language)}`;
 }
 
-/**
- * Get language name by ID, with fallback to ID itself
- * @param languageId - Language ID
- * @param languages - Array of available languages
- * @returns Language name or ID if not found
- */
-export function getLanguageName(
-  languageId: string,
-  languages: Language[]
-): string {
-  const language = resolveLanguage(languageId, languages);
-  return language?.name ?? languageId;
+/** Display name by ID, falling back to the ID itself. */
+export function getLanguageName(languageId: string, languages: readonly Language[]): string {
+  return resolveLanguage(languageId, languages)?.displayName || languageId;
 }

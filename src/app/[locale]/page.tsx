@@ -3,61 +3,64 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
+import { useLocale, useTranslations } from 'next-intl';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 // Components
-import OutputPanel from '@/components/OutputPanel';
-import FileTabs from '@/components/FileTabs';
+import OutputPanel from '@/features/execution/OutputPanel';
+import FileTabs from '@/features/editor/FileTabs';
+import { EditorSkeleton, type RevealRequest } from '@/features/editor/CodeEditor';
 import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { PlaygroundModals } from './components/PlaygroundModals';
+import { useModifierKey } from '@/components/ui/Kbd';
 
 // Dynamic imports for heavy components
-const CodeEditor = dynamicImport(() => import('@/components/CodeEditor'), {
-  loading: () => (
-    <div className="h-full flex items-center justify-center bg-gray-900">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading editor...</p>
-      </div>
-    </div>
-  ),
+const CodeEditor = dynamicImport(() => import('@/features/editor/CodeEditor'), {
+  loading: () => <EditorSkeleton />,
   ssr: false,
 });
-const FileTree = dynamicImport(() => import('@/components/FileTree'));
+const FileTree = dynamicImport(() => import('@/features/editor/FileTree'));
 
 // Hooks & Context
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguages } from '@/hooks/useLanguages';
-import { useCodeExecution } from '@/hooks/useCodeExecution';
-import { useShare } from '@/hooks/useShare';
-import { useSettings } from '@/hooks/useSettings';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useLanguages } from '@/features/editor/useLanguages';
+import { useCodeExecution } from '@/features/execution/useCodeExecution';
+import { useShare } from '@/features/share/useShare';
+import { normalizeColorScheme, useSettings, type EditorSettings, type ThemeSettings } from '@/features/settings/useSettings';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
-import { useHistory } from '@/hooks/useHistory';
-import { useFiles } from '@/hooks/useFiles';
+import { useHistory } from '@/features/execution/useHistory';
+import { useFiles } from '@/features/editor/useFiles';
 import { useToast } from '@/hooks/useToast';
-import { useTheme } from '@/hooks/useTheme';
-import { useLayout } from '@/hooks/useLayout';
-import { HistoryItem } from '@/lib/history';
-import { languagesAPI } from '@/lib/api';
-
-export const dynamic = 'force-dynamic';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useTheme } from '@/features/settings/useTheme';
+import { useLayout } from '@/features/settings/useLayout';
+import type { HistoryItem } from '@/features/execution/history';
+import type { DiagnosticView } from '@/lib/rpc';
+import { useFormatCode } from '@/features/editor/useFormatCode';
 
 function PlaygroundContent() {
   const searchParams = useSearchParams();
+  const t = useTranslations();
+  const locale = useLocale();
   const { user, isAuthenticated, logout } = useAuth();
   const toast = useToast();
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
   const { orientation, toggleOrientation } = useLayout();
+  const narrow = useMediaQuery('(max-width: 767px)');
+  const mod = useModifierKey();
+  const runKeys = [mod, 'Enter'];
 
-  // Custom hooks
   const {
     languages,
     selectedLanguage,
     code: defaultCode,
     loading: loadingLanguages,
     error: languageError,
+    errorKind: languageErrorKind,
     setSelectedLanguage,
     changeLanguage,
+    retry: retryLanguages,
+    retrying: retryingLanguages,
   } = useLanguages();
 
   const {
@@ -77,14 +80,14 @@ function PlaygroundContent() {
     output,
     loading: executing,
     streaming,
-    streamEvents,
     error: executionError,
+    errorKind: executionErrorKind,
+    retryAfterSeconds,
     execute,
-    executeWebSocket,
+    cancel: cancelExecution,
     reset: resetExecution,
-  } = useCodeExecution({
-    enableWebSocket: editorSettings.execution_mode === 'websocket',
-  });
+  } = useCodeExecution();
+  const formatCode = useFormatCode();
 
   const {
     shareUrl,
@@ -105,9 +108,17 @@ function PlaygroundContent() {
   const [showFileTree, setShowFileTree] = useState(false);
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const [showSnippetLibrary, setShowSnippetLibrary] = useState(false);
+  const [reveal, setReveal] = useState<RevealRequest | null>(null);
+  /** File that produced the current output; its diagnostics are drawn in the editor. */
+  const [runFileId, setRunFileId] = useState<string | null>(null);
 
   const history = useHistory();
-  const error = languageError || executionError || shareError || settingsError;
+  // The backend-down state has its own banner; other language errors show as a request error.
+  const backendDown = !!languageError && languageErrorKind === 'unavailable';
+  // While the backend is known to be down, its banner already explains a failed run.
+  const runError = backendDown && executionErrorKind === 'unavailable' ? null : executionError;
+  const error = runError || shareError || settingsError || (backendDown ? null : languageError);
+  const errorKind = runError ? executionErrorKind : languageError && !backendDown ? languageErrorKind : null;
   const initializedRef = useRef<Set<string>>(new Set());
 
   // Set initial code when language loads
@@ -131,81 +142,93 @@ function PlaygroundContent() {
   const getCurrentCode = useCallback(() => activeFile?.content || '', [activeFile]);
 
   const handleExecuteCode = useCallback(() => {
-    const code = getCurrentCode();
-    const mode = editorSettings.execution_mode || 'http';
-    if (mode === 'websocket') {
-      executeWebSocket(code, selectedLanguage, languages);
-    } else {
-      execute(code, selectedLanguage, languages);
-    }
-  }, [getCurrentCode, editorSettings.execution_mode, selectedLanguage, languages, execute, executeWebSocket]);
+    // With the backend known to be down, Run also tries to reconnect (the banner shows progress).
+    if (languageError && languageErrorKind === 'unavailable') retryLanguages();
+    setRunFileId(activeFile?.id ?? null);
+    execute(getCurrentCode(), selectedLanguage, languages);
+  }, [activeFile, getCurrentCode, selectedLanguage, languages, execute, languageError, languageErrorKind, retryLanguages]);
 
   const handleFormatCode = useCallback(async () => {
     if (!activeFile?.content) return;
-    try {
-      const formattedCode = await languagesAPI.formatCode(selectedLanguage, activeFile.content);
-      updateFileContent(activeFile.id, formattedCode);
-      toast.success('Code formatted successfully');
-    } catch {
-      toast.error('Failed to format code');
+    const result = await formatCode(selectedLanguage, activeFile.name, activeFile.content);
+    if (result.ok) {
+      updateFileContent(activeFile.id, result.content);
+      toast.success(t('toast.formatted'));
+    } else {
+      toast.error(t('errors.format', { message: result.message }));
     }
-  }, [activeFile, selectedLanguage, updateFileContent, toast]);
+  }, [activeFile, selectedLanguage, updateFileContent, toast, formatCode, t]);
 
   const handleShare = useCallback(() => {
     createShare(getCurrentCode(), selectedLanguage, languages);
   }, [createShare, getCurrentCode, selectedLanguage, languages]);
 
+  const embedCode = shareId
+    ? `<iframe src="${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/embed/${shareId}" width="100%" height="600" style="border:0" title="${t('app.title')}"></iframe>`
+    : '';
+
   const handleCopyEmbed = useCallback(async () => {
-    if (!shareId) return;
-    const embedCode = `<iframe src="${window.location.origin}/embed/${shareId}" width="100%" height="600" frameborder="0"></iframe>`;
+    if (!embedCode) return;
     try {
       await navigator.clipboard.writeText(embedCode);
-      toast.success('Embed code copied to clipboard!');
+      toast.success(t('share.embedCopied'));
     } catch {
-      toast.error('Failed to copy to clipboard');
+      toast.error(t('errors.clipboard'));
     }
-  }, [shareId, toast]);
+  }, [embedCode, toast, t]);
 
-  const handleSelectTemplate = useCallback(
-    (code: string) => {
-      if (activeFile) {
-        updateFileContent(activeFile.id, code);
-        toast.success('Template loaded successfully');
-      }
+  /** Replaces the active file's code and offers to undo it. */
+  const replaceCode = useCallback(
+    (nextCode: string, message: string) => {
+      if (!activeFile) return;
+      const fileId = activeFile.id;
+      const previous = activeFile.content;
+      updateFileContent(fileId, nextCode);
+      const changed = previous.trim() !== '' && previous !== nextCode;
+      toast.success(message, changed ? { action: { label: t('common.undo'), onClick: () => updateFileContent(fileId, previous) } } : undefined);
     },
-    [activeFile, updateFileContent, toast]
+    [activeFile, updateFileContent, toast, t]
   );
 
-  const handleSelectSnippet = useCallback(
-    (code: string) => {
-      if (activeFile) {
-        updateFileContent(activeFile.id, code);
-        toast.success('Snippet loaded successfully');
-      }
-    },
-    [activeFile, updateFileContent, toast]
-  );
+  const handleSelectTemplate = useCallback((code: string) => replaceCode(code, t('templates.loaded')), [replaceCode, t]);
+  const handleSelectSnippet = useCallback((code: string) => replaceCode(code, t('snippets.loaded')), [replaceCode, t]);
 
   const handleLoadHistory = useCallback(
     (item: HistoryItem) => {
-      if (activeFile) {
-        updateFileContent(activeFile.id, item.code);
-      }
+      replaceCode(item.code, t('history.loaded'));
       setSelectedLanguage(item.language);
     },
-    [activeFile, updateFileContent, setSelectedLanguage]
+    [replaceCode, setSelectedLanguage, t]
   );
 
   const handleAddFile = useCallback(() => {
     const fileNumber = files.length + 1;
     const newFileName = `file${fileNumber}.ksj`;
     addFile(newFileName, '');
-    toast.success(`Created ${newFileName}`);
-  }, [files.length, addFile, toast]);
+    toast.success(t('files.created', { name: newFileName }));
+  }, [files.length, addFile, toast, t]);
 
-  // Save to history when execution completes
+  const handleJumpTo = useCallback(
+    (d: DiagnosticView) => {
+      const byName = files.find((f) => f.name === d.path);
+      const target = byName?.id ?? runFileId ?? activeFileId;
+      if (target && target !== activeFileId) setActiveFile(target);
+      setReveal({ line: d.line, column: d.column, nonce: Date.now() });
+    },
+    [files, runFileId, activeFileId, setActiveFile]
+  );
+
+  const handleSaveSettings = useCallback(
+    (editor: EditorSettings, nextTheme: ThemeSettings) => {
+      void saveSettings(editor, nextTheme);
+      setTheme(nextTheme.theme);
+    },
+    [saveSettings, setTheme]
+  );
+
+  // Save to history when execution completes (cancelled runs are not recorded)
   useEffect(() => {
-    if (output && !executing && !streaming) {
+    if (output && !executing && !streaming && output.status !== 'cancelled' && output.status !== 'pending') {
       history.addItem({
         language: selectedLanguage,
         code: getCurrentCode(),
@@ -244,27 +267,29 @@ function PlaygroundContent() {
   useKeyboardShortcut('b', toggleOrientation, { ctrl: true });
 
   if (loadingLanguages) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
+    return <AppShellSkeleton label={t('app.loading')} />;
   }
 
+  const highContrast = normalizeColorScheme(themeSettings.color_scheme) === 'high-contrast';
+  const editorTheme = highContrast
+    ? resolvedTheme === 'dark'
+      ? 'hc-black'
+      : 'hc-light'
+    : resolvedTheme === 'dark'
+      ? 'code-sanctuary-dark'
+      : 'code-sanctuary-light';
+  const direction = narrow ? 'vertical' : orientation;
+  const runDiagnostics = output && runFileId === activeFileId ? output.diagnostics : undefined;
+
   return (
-    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-void)' }}>
-      {/* Skip Link */}
+    <div className="flex h-dvh flex-col bg-void">
       <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg"
+        href="#code-editor"
+        className="sr-only z-50 rounded-md bg-accent px-4 py-2 text-on-accent focus:not-sr-only focus:absolute focus:left-3 focus:top-3"
       >
-        Skip to main content
+        {t('app.skipToEditor')}
       </a>
 
-      {/* Header */}
       <PlaygroundHeader
         languages={languages}
         selectedLanguage={selectedLanguage}
@@ -277,18 +302,24 @@ function PlaygroundContent() {
         onToggleTheme={toggleTheme}
         orientation={orientation}
         onToggleOrientation={toggleOrientation}
+        canChangeLayout={!narrow}
         onOpenTemplates={() => setShowTemplateGallery(true)}
+        onOpenSnippets={() => setShowSnippetLibrary(true)}
         onOpenHistory={() => setShowHistory(true)}
+        onToggleFileTree={() => setShowFileTree((prev) => !prev)}
+        onFormat={handleFormatCode}
+        onOpenShortcuts={() => setShowShortcutsHelp(true)}
         onShare={handleShare}
         sharing={sharing}
         onOpenSettings={() => setShowSettings(true)}
         onExecute={handleExecuteCode}
         executing={executing}
         streaming={streaming}
+        onCancel={cancelExecution}
+        runKeys={runKeys}
       />
 
-      {/* Main Content */}
-      <div id="main-content" className="flex-1 flex overflow-hidden">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
         {showFileTree && (
           <FileTree
             isOpen={showFileTree}
@@ -302,13 +333,9 @@ function PlaygroundContent() {
           />
         )}
 
-        <PanelGroup direction={orientation} className="flex-1">
-          {/* Editor Panel */}
-          <Panel defaultSize={50} minSize={20}>
-            <div
-              className="h-full flex flex-col"
-              style={{ borderRight: '1px solid var(--border-hair)', backgroundColor: 'var(--editor-zone)' }}
-            >
+        <PanelGroup direction={direction} className="flex-1">
+          <Panel defaultSize={narrow ? 55 : 50} minSize={20}>
+            <section id="code-editor" tabIndex={-1} className="flex h-full flex-col bg-surface" aria-label={t('editor.label')}>
               <FileTabs
                 files={files}
                 activeFileId={activeFileId}
@@ -316,8 +343,10 @@ function PlaygroundContent() {
                 onCloseFile={deleteFile}
                 onRenameFile={renameFile}
                 onAddFile={handleAddFile}
+                onToggleFileTree={() => setShowFileTree((prev) => !prev)}
+                fileTreeOpen={showFileTree}
               />
-              <div className="flex-1 min-h-0">
+              <div className="min-h-0 flex-1">
                 <CodeEditor
                   value={activeFile?.content || ''}
                   onChange={(content) => activeFile && updateFileContent(activeFile.id, content)}
@@ -326,53 +355,48 @@ function PlaygroundContent() {
                   fontSize={editorSettings.font_size}
                   fontFamily={editorSettings.font_family}
                   tabSize={editorSettings.tab_size}
-                  minimap={editorSettings.minimap}
-                  theme={resolvedTheme === 'dark' ? 'code-sanctuary-dark' : 'code-sanctuary-light'}
+                  minimap={editorSettings.minimap && !narrow}
+                  theme={editorTheme}
                   onFormat={handleFormatCode}
+                  ariaLabel={`${t('editor.label')}: ${activeFile?.name ?? ''}`}
+                  diagnostics={runDiagnostics}
+                  reveal={reveal}
                 />
               </div>
-            </div>
+            </section>
           </Panel>
 
-          {/* Resize Handle */}
-          <PanelResizeHandle
-            className="w-px cursor-col-resize data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:cursor-row-resize"
-            style={{ backgroundColor: 'var(--border-hair)' }}
-          />
+          <PanelResizeHandle aria-label={t('editor.resize')} className="group relative bg-hair outline-none data-[panel-group-direction=horizontal]:w-px data-[panel-group-direction=vertical]:h-px data-[resize-handle-state=drag]:bg-accent data-[resize-handle-state=hover]:bg-strong focus-visible:bg-accent">
+            {/* Wider invisible hit area than the 1px rule. */}
+            <span className="absolute group-data-[panel-group-direction=horizontal]:inset-y-0 group-data-[panel-group-direction=horizontal]:-inset-x-3 group-data-[panel-group-direction=vertical]:inset-x-0 group-data-[panel-group-direction=vertical]:-inset-y-3" />
+          </PanelResizeHandle>
 
-          {/* Output Panel */}
-          <Panel defaultSize={50} minSize={20}>
-            <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--output-zone)' }}>
-              <div
-                className="px-6 py-3 flex items-center justify-between"
-                style={{ borderBottom: '1px solid var(--border-hair)' }}
-              >
-                <h2 className="text-xs font-light tracking-wide" style={{ color: 'var(--text-whisper)' }}>
-                  OUTPUT
-                </h2>
-              </div>
-              <div className="flex-1 min-h-0">
-                <OutputPanel
-                  output={output}
-                  loading={executing}
-                  error={error}
-                  streaming={streaming}
-                  streamEvents={streamEvents}
-                  onClear={resetExecution}
-                />
-              </div>
-            </div>
+          <Panel defaultSize={narrow ? 45 : 50} minSize={20}>
+            <OutputPanel
+              output={output}
+              loading={executing}
+              error={error}
+              errorKind={errorKind}
+              retryAfterSeconds={runError ? retryAfterSeconds : null}
+              streaming={streaming}
+              onClear={resetExecution}
+              onRetry={runError ? handleExecuteCode : languageError ? retryLanguages : undefined}
+              onJumpTo={handleJumpTo}
+              onOpenTemplates={() => setShowTemplateGallery(true)}
+              runKeys={runKeys}
+              backendIssue={backendDown ? { message: languageError ?? '', onRetry: retryLanguages, retrying: retryingLanguages } : null}
+            />
           </Panel>
         </PanelGroup>
-      </div>
+      </main>
 
-      {/* Modals */}
       <PlaygroundModals
         showSettings={showSettings}
         onCloseSettings={() => setShowSettings(false)}
-        onSaveSettings={saveSettings}
+        onSaveSettings={handleSaveSettings}
         editorSettings={editorSettings}
-        themeSettings={themeSettings}
+        themeSettings={{ ...themeSettings, theme }}
+        isAuthenticated={isAuthenticated}
         showAuthModal={showAuthModal}
         onCloseAuthModal={() => setShowAuthModal(false)}
         showShortcutsHelp={showShortcutsHelp}
@@ -389,7 +413,7 @@ function PlaygroundContent() {
         onCloseSnippetLibrary={() => setShowSnippetLibrary(false)}
         onSelectSnippet={handleSelectSnippet}
         shareUrl={shareUrl}
-        shareId={shareId}
+        embedCode={embedCode}
         onCopyShareUrl={copyToClipboard}
         onCopyEmbed={handleCopyEmbed}
         onCloseShareModal={closeShareModal}
@@ -398,18 +422,40 @@ function PlaygroundContent() {
   );
 }
 
+/** First paint: the shell's real geometry with placeholder content, never a blank screen. */
+function AppShellSkeleton({ label }: { label?: string }) {
+  return (
+    <div className="flex h-dvh flex-col bg-void" role="status" aria-busy="true">
+      <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-hair bg-surface px-4" aria-hidden="true">
+        <div className="absolute inset-x-0 top-0 flex h-[3px]">
+          <span className="flex-[5] bg-dancheong-blue" />
+          <span className="flex-[2] bg-dancheong-red" />
+          <span className="flex-[1] bg-dancheong-yellow" />
+          <span className="flex-[2] bg-dancheong-green" />
+        </div>
+        <span className="size-7 rounded-md bg-hover" />
+        <span className="h-4 w-36 rounded-sm bg-hover max-sm:hidden" />
+        <span className="h-9 w-32 rounded-md bg-hover" />
+        <span className="flex-1" />
+        <span className="h-9 w-20 rounded-md bg-accent/60" />
+      </div>
+      <div className="flex min-h-0 flex-1 max-md:flex-col">
+        <div className="flex flex-1 flex-col border-hair bg-surface md:border-r" aria-hidden="true">
+          <div className="h-10 border-b border-hair" />
+          <EditorSkeleton />
+        </div>
+        <div className="flex flex-1 flex-col bg-panel max-md:border-t max-md:border-hair">
+          <div className="h-10 border-b border-hair" aria-hidden="true" />
+          {label && <p className="m-auto px-6 text-center text-sm text-fg-muted">{label}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PlaygroundPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="h-screen flex items-center justify-center bg-gray-950 text-white">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p>Loading...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<AppShellSkeleton />}>
       <PlaygroundContent />
     </Suspense>
   );

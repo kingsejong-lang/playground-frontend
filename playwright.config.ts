@@ -71,8 +71,10 @@ export default defineConfig({
   // Run your local dev server before starting the tests
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:3000/ko',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    // Smoke tests run without a backend: point the API at a closed port.
+    env: { NEXT_PUBLIC_API_URL: process.env.E2E_API_URL || 'http://127.0.0.1:9' },
   },
 });

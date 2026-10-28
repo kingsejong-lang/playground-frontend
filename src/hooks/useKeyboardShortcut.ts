@@ -14,6 +14,15 @@ export interface KeyboardShortcutOptions {
 
 type ShortcutHandler = (e: KeyboardEvent) => void;
 
+/** True when the key press is text entry: inputs, textareas, contenteditable and Monaco. */
+export function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  if (target.closest('.monaco-editor')) return true;
+  if (target instanceof HTMLElement && target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
 /**
  * Register a keyboard shortcut handler.
  *
@@ -41,6 +50,8 @@ export function useKeyboardShortcut(
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (!enabled) return;
+      // Shortcuts without Ctrl/Cmd or Alt (e.g. "?") must not swallow typing.
+      if (!ctrl && !alt && isEditableTarget(e.target)) return;
 
       // Use metaKey for Mac (Cmd), ctrlKey for Windows/Linux
       const ctrlKey = navigator.platform.includes('Mac') ? e.metaKey : e.ctrlKey;

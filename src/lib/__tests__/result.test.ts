@@ -59,7 +59,7 @@ describe('Result type', () => {
     })
 
     it('should not map failed result', () => {
-      const result = err('error')
+      const result = err<number, string>('error')
       const mapped = map(result, (x: number) => x * 2)
 
       expect(isErr(mapped)).toBe(true)
@@ -81,7 +81,7 @@ describe('Result type', () => {
     })
 
     it('should not map successful result', () => {
-      const result = ok(42)
+      const result = ok<number, string>(42)
       const mapped = mapErr(result, (e: string) => `Mapped: ${e}`)
 
       expect(isOk(mapped)).toBe(true)
@@ -229,7 +229,7 @@ describe('Result type', () => {
     })
 
     it('should return first error', () => {
-      const results = [ok(1), err('error'), ok(3)]
+      const results = [ok<number, string>(1), err<number, string>('error'), ok<number, string>(3)]
       const combined = combine(results)
 
       expect(isErr(combined)).toBe(true)
@@ -239,7 +239,7 @@ describe('Result type', () => {
     })
 
     it('should handle empty array', () => {
-      const results: typeof ok<number, string>[] = []
+      const results: ReturnType<typeof ok<number, string>>[] = []
       const combined = combine(results)
 
       expect(isOk(combined)).toBe(true)

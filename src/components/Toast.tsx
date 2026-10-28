@@ -1,102 +1,123 @@
 /**
- * Toast notification component.
- * Displays temporary notifications with auto-dismiss functionality.
+ * Toast notifications.
+ *
+ * The container is a manual popover, so toasts stay visible above modal dialogs
+ * (both live in the browser's top layer; the most recently shown wins).
+ * Errors are announced assertively, everything else politely.
  */
+'use client';
 
-import { useEffect } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info'
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
-export interface ToastProps {
-  id: string
-  type: ToastType
-  message: string
-  duration?: number
-  onClose: () => void
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
 }
 
-export function Toast({ id, type, message, duration = 5000, onClose }: ToastProps) {
+export interface ToastItem {
+  id: string;
+  type: ToastType;
+  message: string;
+  duration?: number;
+  action?: ToastAction;
+}
+
+const ICONS = { success: CheckCircle2, error: XCircle, warning: AlertTriangle, info: Info };
+const TONES: Record<ToastType, string> = {
+  success: 'text-ok',
+  error: 'text-err',
+  warning: 'text-warn',
+  info: 'text-info',
+};
+
+export interface ToastProps extends ToastItem {
+  onClose: () => void;
+}
+
+export function Toast({ type, message, duration, action, onClose }: ToastProps) {
+  const t = useTranslations('toast');
+  const [paused, setPaused] = useState(false);
+  const expire = useEffectEvent(() => onClose());
+  // Toasts with an action stay long enough to reach the button.
+  const timeout = duration ?? (action ? 8000 : type === 'error' ? 7000 : 4000);
+
   useEffect(() => {
-    const timer = setTimeout(onClose, duration)
-    return () => clearTimeout(timer)
-  }, [onClose, duration])
+    if (paused) return;
+    const timer = setTimeout(() => expire(), timeout);
+    return () => clearTimeout(timer);
+  }, [paused, timeout]);
 
-  const colors = {
-    success: { bg: 'rgba(63, 182, 139, 0.15)', border: 'var(--accent-green)' },
-    error: { bg: 'rgba(232, 69, 69, 0.15)', border: 'var(--accent-crimson)' },
-    warning: { bg: 'rgba(255, 193, 7, 0.15)', border: '#ffc107' },
-    info: { bg: 'rgba(76, 95, 213, 0.15)', border: 'var(--accent-indigo)' },
-  }
-
-  const icons = {
-    success: '✓',
-    error: '✕',
-    warning: '⚠',
-    info: 'ℹ',
-  }
-
+  const Icon = ICONS[type];
   return (
     <div
-      className="border rounded-lg p-4 shadow-lg mb-2 animate-slide-in-right min-w-[320px] max-w-md"
-      style={{
-        backgroundColor: colors[type].bg,
-        borderColor: colors[type].border,
-      }}
-      role="alert"
-      aria-live="polite"
+      className="pointer-events-auto flex w-[min(22rem,calc(100vw-2rem))] animate-slide-in items-start gap-3 rounded-lg border border-hair bg-raised p-3 pr-2 shadow-raised"
+      role={type === 'error' ? 'alert' : 'status'}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
     >
-      <div className="flex items-start gap-3">
-        <span
-          className="text-xl font-bold flex-shrink-0"
-          style={{ color: colors[type].border }}
-        >
-          {icons[type]}
-        </span>
-        <p className="text-sm flex-1 break-words" style={{ color: 'var(--text-primary)' }}>{message}</p>
+      <Icon className={`mt-0.5 size-4 shrink-0 ${TONES[type]}`} aria-hidden="true" />
+      <p className="min-w-0 flex-1 text-sm text-fg">{message}</p>
+      {action && (
         <button
-          onClick={onClose}
-          className="transition-colors ml-2 flex-shrink-0"
-          style={{ color: 'var(--text-whisper)' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-whisper)'}
-          aria-label="Close notification"
+          type="button"
+          onClick={() => {
+            action.onClick();
+            onClose();
+          }}
+          className="-my-1 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-accent-text hover:bg-hover"
         >
-          ✕
+          {action.label}
         </button>
-      </div>
+      )}
+      <button
+        type="button"
+        onClick={() => onClose()}
+        className="-my-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-fg-muted hover:bg-hover hover:text-fg"
+        aria-label={t('close')}
+      >
+        <X className="size-4" aria-hidden="true" />
+      </button>
     </div>
-  )
+  );
 }
 
-/**
- * Toast container that holds multiple toast notifications.
- */
 export interface ToastContainerProps {
-  toasts: Array<{
-    id: string
-    type: ToastType
-    message: string
-    duration?: number
-  }>
-  onClose: (id: string) => void
+  toasts: ToastItem[];
+  onClose: (id: string) => void;
 }
 
 export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
+  const t = useTranslations('toast');
+  const ref = useRef<HTMLElement>(null);
+
+  // Re-show the popover whenever toasts change so it stacks above any open dialog.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof el.showPopover !== 'function') return;
+    try {
+      if (el.matches(':popover-open')) el.hidePopover();
+      if (toasts.length > 0) el.showPopover();
+    } catch {
+      // Popover API unavailable: the fixed container still renders.
+    }
+  }, [toasts]);
+
   return (
-    <div
-      className="fixed top-4 right-4 z-50 flex flex-col items-end gap-2"
-      aria-label="Notifications"
+    <section
+      ref={ref}
+      popover="manual"
+      aria-label={t('region')}
+      className="pointer-events-none fixed inset-auto top-3 right-3 m-0 flex flex-col items-end gap-2 overflow-visible border-0 bg-transparent p-0"
     >
       {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          id={toast.id}
-          type={toast.type}
-          message={toast.message}
-          duration={toast.duration}
-          onClose={() => onClose(toast.id)}
-        />
+        <Toast key={toast.id} {...toast} onClose={() => onClose(toast.id)} />
       ))}
-    </div>
-  )
+    </section>
+  );
 }

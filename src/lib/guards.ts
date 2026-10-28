@@ -3,7 +3,7 @@
  * Provides type-safe runtime validation using Zod schemas.
  */
 
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { Result, ok, err, parseError, validationError } from './result';
 
 /**
@@ -42,22 +42,6 @@ export function hasMessage(value: unknown): value is { message: string } {
     value !== null &&
     'message' in value &&
     typeof (value as { message: unknown }).message === 'string'
-  );
-}
-
-/**
- * Type guard for axios errors
- */
-export function isAxiosError(value: unknown): value is {
-  response?: { data?: { message?: string }; status?: number };
-  message: string;
-} {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'message' in value &&
-    'isAxiosError' in value &&
-    (value as { isAxiosError: unknown }).isAxiosError === true
   );
 }
 
@@ -156,10 +140,6 @@ export function extractErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  if (isAxiosError(error)) {
-    return error.response?.data?.message || error.message;
-  }
-
   if (hasMessage(error)) {
     return error.message;
   }
@@ -175,10 +155,6 @@ export function extractErrorMessage(error: unknown): string {
  * Extract error status code from unknown error
  */
 export function extractErrorStatus(error: unknown): number | undefined {
-  if (isAxiosError(error)) {
-    return error.response?.status;
-  }
-
   if (isRecord(error) && typeof error.status === 'number') {
     return error.status;
   }
