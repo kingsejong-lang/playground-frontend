@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T00:00:00Z",
+  "title": "Design System: KingSejong Playground",
+  "extensions": {
+    "colorMeta": {
+      "dancheong-indigo": {
+        "role": "primary",
+        "displayName": "Dancheong Indigo",
+        "tonalRamp": [
+          "#1b2152",
+          "#273077",
+          "#34409c",
+          "#4c5fd5",
+          "#6f7fe3",
+          "#8f9cf7",
+          "#b9c1fb",
+          "#e2e6fe"
+        ]
+      },
+      "dancheong-crimson": {
+        "role": "secondary",
+        "displayName": "Dancheong Crimson",
+        "tonalRamp": [
+          "#3d1010",
+          "#5e1818",
+          "#8a2323",
+          "#c73636",
+          "#e05252",
+          "#ff6b6b",
+          "#ffa3a3",
+          "#ffdede"
+        ]
+      },
+      "dancheong-ochre": {
+        "role": "tertiary",
+        "displayName": "Dancheong Ochre",
+        "tonalRamp": [
+          "#3a2700",
+          "#5c3d00",
+          "#8a5a00",
+          "#b9861c",
+          "#e9b949",
+          "#f2cf7c",
+          "#f8e2ae",
+          "#fdf3dc"
+        ]
+      },
+      "dancheong-green": {
+        "role": "tertiary",
+        "displayName": "Dancheong Green",
+        "tonalRamp": [
+          "#06281b",
+          "#0e432f",
+          "#1a7a57",
+          "#3fb68b",
+          "#4fd1a1",
+          "#86e2bf",
+          "#bff0dc",
+          "#e6faf2"
+        ]
+      },
+      "bg-void": {
+        "role": "neutral",
+        "displayName": "Void"
+      },
+      "editor-zone": {
+        "role": "neutral",
+        "displayName": "Editor Zone"
+      },
+      "output-zone": {
+        "role": "neutral",
+        "displayName": "Output Zone"
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Raised"
+      },
+      "border-hair": {
+        "role": "neutral",
+        "displayName": "Hairline"
+      },
+      "text-whisper": {
+        "role": "neutral",
+        "displayName": "Whisper Text"
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "App name and dialog titles."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Panel and section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Dialog text, callouts, menu items."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Metrics, hints, counts."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Output, file names, key caps."
+      }
+    },
+    "shadows": [
+      {
+        "name": "raised",
+        "value": "0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4)",
+        "purpose": "Dialogs, menus and toasts in the top layer only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Hover and pressed colour changes."
+      },
+      {
+        "name": "slide-in",
+        "value": "200ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Dialogs and toasts entering."
+      },
+      {
+        "name": "run-sweep",
+        "value": "1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite",
+        "purpose": "Live run indicator; static under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Run Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single primary action; shows the shortcut from 1280px.",
+      "html": "<button class=\"ds-run\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M6 3l15 9-15 9z\"/></svg>실행</button>",
+      "css": ".ds-run{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border:0;border-radius:6px;background:var(--accent-indigo,#4c5fd5);color:#fff;font:500 14px/1 system-ui,sans-serif;cursor:pointer;transition:background-color .15s}.ds-run:hover{background:var(--accent-indigo-hover,#3f51c4)}.ds-run:focus-visible{outline:2px solid var(--focus-ring,#8f9cf7);outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Icon Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Toolbar actions with tooltip and accessible name.",
+      "html": "<button class=\"ds-ghost\" aria-label=\"설정\" title=\"설정\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg></button>",
+      "css": ".ds-ghost{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:0;border-radius:6px;background:transparent;color:var(--text-secondary,#b4b7cf);cursor:pointer}.ds-ghost:hover{background:var(--surface-hover,#23232f);color:var(--text-primary,#e4e4e7)}.ds-ghost[aria-pressed=true]{background:var(--accent-indigo-soft,rgb(76 95 213/.16));color:var(--accent-indigo-text,#8f9cf7)}.ds-ghost:focus-visible{outline:2px solid var(--focus-ring,#8f9cf7);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Inputs and selects on the void ground with a 3:1 border.",
+      "html": "<input class=\"ds-input\" placeholder=\"출력에서 찾을 내용…\">",
+      "css": ".ds-input{height:36px;padding:0 12px;border:1px solid var(--border-strong,#62667f);border-radius:6px;background:var(--bg-void,#0a0a0e);color:var(--text-primary,#e4e4e7);font:14px system-ui,sans-serif}.ds-input::placeholder{color:var(--text-whisper,#8e92b3)}.ds-input:focus-visible{outline:2px solid var(--focus-ring,#8f9cf7);outline-offset:2px}"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Run status in the output header: icon, words, elapsed time.",
+      "html": "<span class=\"ds-chip\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>실행 완료</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:9999px;background:var(--status-success-soft,rgb(79 209 161/.12));color:var(--status-success,#4fd1a1);font:500 12px system-ui,sans-serif}"
+    },
+    {
+      "name": "Dancheong Band",
+      "kind": "custom",
+      "description": "Signature 3px band at the top of the header (청·적·황·녹).",
+      "html": "<div class=\"ds-band\"><span></span><span></span><span></span><span></span></div>",
+      "css": ".ds-band{display:flex;height:3px;width:100%}.ds-band span:nth-child(1){flex:5;background:var(--accent-indigo,#4c5fd5)}.ds-band span:nth-child(2){flex:2;background:var(--accent-crimson,#c73636)}.ds-band span:nth-child(3){flex:1;background:var(--accent-ochre,#e9b949)}.ds-band span:nth-child(4){flex:2;background:var(--accent-green,#3fb68b)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Code Sanctuary",
+    "overview": "A quiet, dark workroom where Korean code is the brightest thing on screen. The interface is a working IDE first; the identity lives in a few precise details taken from dancheong: a hairline band of 청·적·황·녹, an indigo primary action, and status colours drawn from the same family.",
+    "keyCharacteristics": [
+      "Terminal-dark surfaces in four steps separated by hairlines.",
+      "One primary action per surface: Run, which becomes Stop while a run is live.",
+      "Dancheong band at the top edge of the header and the app mark; nowhere else as decoration.",
+      "Status is colour + icon + words, never colour alone.",
+      "Korean copy first, written for Korean readers."
+    ],
+    "rules": [
+      {
+        "name": "The Meaning-Only Rule",
+        "body": "Dancheong hues mark state or action. Outside the top band and the mark, a hue that carries no meaning is a bug.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Shade Rule",
+        "body": "Every accent has a fill shade and a text shade. Never put the fill shade on a dark panel as text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lift-Only-When-Floating Rule",
+        "body": "A shadow means this is above the work and will go away.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep Run the only filled indigo button on the main screen.",
+      "Do pair every status colour with an icon and a word.",
+      "Do write Korean copy in plain 해요체 for learners, and say what to do next in every error.",
+      "Do use the CSS tokens instead of raw colours."
+    ],
+    "donts": [
+      "Don't use Tailwind's raw gray/blue palette in components; it ignores the light theme.",
+      "Don't use emoji or Unicode glyphs as icons; use lucide icons at 16px.",
+      "Don't spread dancheong colours as decoration beyond the top band and the mark.",
+      "Don't put text in text-whisper on anything lighter than the raised surface."
+    ]
+  }
+}
