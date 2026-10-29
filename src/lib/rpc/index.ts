@@ -17,3 +17,4 @@ export {
   type MetricsView,
   type RunRequestInit,
 } from './run-stream';
+export { decodeInitialLanguages, type InitialLanguages, type InitialLanguagesPayload, type InitialStarter } from './initial';

@@ -94,3 +94,25 @@ describe('useLanguages', () => {
     expect(result.current.code).toBe('print(1)');
   });
 });
+
+describe('useLanguages with server-rendered languages', () => {
+  const languages = [create(LanguageSchema, { id: 'python' }), create(LanguageSchema, { id: 'kingsejong', defaultTemplateId: 'hello_world' })];
+
+  it('starts ready with the server data and sends no request', async () => {
+    const listLanguages = vi.fn(() => ({ languages: [] }));
+    const { wrapper } = rpcWrapper(({ service }) => service(LanguageService, { listLanguages } as never));
+    const initial = { languages, starter: { languageId: 'kingsejong', entryFile: 'main.ksj', files: [{ path: 'main.ksj', content: '출력("서버")' }] } };
+    const { result } = renderHook(() => useLanguages(initial), { wrapper });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.selectedLanguage).toBe('kingsejong');
+    expect(result.current.code).toBe('출력("서버")');
+    await act(async () => {});
+    expect(listLanguages).not.toHaveBeenCalled();
+  });
+
+  it('uses the built-in sample when the starter is missing', () => {
+    const { wrapper } = rpcWrapper(() => {});
+    const { result } = renderHook(() => useLanguages({ languages }), { wrapper });
+    expect(result.current.code).toContain('출력(');
+  });
+});
