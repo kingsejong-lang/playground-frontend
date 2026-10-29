@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { assertValid, useRpc } from '@/lib/rpc';
 import { z } from '@/lib/zod';
 import { useFailureText } from '@/hooks/useFailureText';
+import { createLocalStore, useLocalStore } from '@/lib/local-store';
 
 export interface EditorSettings {
   font_size: number;
@@ -101,76 +102,84 @@ const LocalSettingsSchema = z.object({
   theme: z.object({ theme: z.enum(['dark', 'light', 'system']), color_scheme: z.string().max(32) }),
 });
 
-function readLocalSettings(): { editor: EditorSettings; theme: ThemeSettings } | null {
-  if (typeof window === 'undefined') return null;
+type StoredSettings = { editor: EditorSettings; theme: ThemeSettings };
+
+function parseLocalSettings(raw: string | null): StoredSettings | null {
+  if (!raw) return null;
   try {
-    const parsed = LocalSettingsSchema.safeParse(JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) ?? 'null'));
+    const parsed = LocalSettingsSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
 }
 
-function writeLocalSettings(editor: EditorSettings, theme: ThemeSettings): void {
-  try {
-    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify({ editor, theme }));
-  } catch {
-    // Storage blocked or full: the settings still apply for this visit.
-  }
-}
+const localSettingsStore = createLocalStore<StoredSettings | null>(LOCAL_SETTINGS_KEY, parseLocalSettings, null, (v) => JSON.stringify(v));
 
 interface UseSettingsReturn {
   editorSettings: EditorSettings;
   themeSettings: ThemeSettings;
   error: string | null;
   saveSettings: (editor: EditorSettings, theme: ThemeSettings) => Promise<void>;
+  /** Fetches the signed-in user's settings again. */
   loadSettings: () => Promise<void>;
 }
 
+/**
+ * Editor and theme settings. Anonymous visitors keep them in this browser
+ * (read with useSyncExternalStore); signed-in users load and save them on the
+ * server.
+ */
 export function useSettings(isAuthenticated: boolean): UseSettingsReturn {
   const api = useRpc();
   const t = useTranslations('errors');
   const failureText = useFailureText();
-  const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
-  const [themeSettings, setThemeSettings] = useState<ThemeSettings>(DEFAULT_THEME_SETTINGS);
+  const local = useLocalStore(localSettingsStore);
+  // Settings of the signed-in user; null until loaded (defaults show meanwhile).
+  const [remote, setRemote] = useState<StoredSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /** The signed-in user's settings; null when none are saved or the server is unavailable (defaults apply). */
+  const fetchRemote = useCallback(
+    () =>
+      api.settings
+        .getSettings({})
+        .then(({ settings }): StoredSettings => fromProtoSettings(settings, DEFAULT_THEME_SETTINGS.color_scheme))
+        .catch(() => null),
+    [api]
+  );
+
   const loadSettings = useCallback(async () => {
-    if (!isAuthenticated) {
-      const local = readLocalSettings();
-      setEditorSettings(local?.editor ?? DEFAULT_EDITOR_SETTINGS);
-      setThemeSettings(local?.theme ?? DEFAULT_THEME_SETTINGS);
-      return;
-    }
-    try {
-      setError(null);
-      const { settings } = await api.settings.getSettings({});
-      const mapped = fromProtoSettings(settings, DEFAULT_THEME_SETTINGS.color_scheme);
-      setEditorSettings(mapped.editor);
-      setThemeSettings(mapped.theme);
-    } catch {
-      // No saved settings (or server unavailable): use defaults.
-      setEditorSettings(DEFAULT_EDITOR_SETTINGS);
-      setThemeSettings(DEFAULT_THEME_SETTINGS);
-    }
-  }, [api, isAuthenticated]);
+    if (!isAuthenticated) return;
+    const next = await fetchRemote();
+    setRemote(next);
+    setError(null);
+  }, [fetchRemote, isAuthenticated]);
 
   useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    void fetchRemote().then((next) => {
+      if (cancelled) return;
+      setRemote(next);
+      setError(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchRemote, isAuthenticated]);
+
+  const current = isAuthenticated ? remote : local;
 
   const saveSettings = useCallback(
     async (editor: EditorSettings, theme: ThemeSettings) => {
-      // Apply locally first.
-      setEditorSettings(editor);
-      setThemeSettings(theme);
       setError(null);
-
       if (!isAuthenticated) {
-        writeLocalSettings(editor, theme);
+        localSettingsStore.set({ editor, theme });
         return;
       }
-
+      // Apply locally first.
+      setRemote({ editor, theme });
       try {
         const request = toUpdateRequest(editor, theme);
         assertValid(UpdateSettingsRequestSchema, request);
@@ -182,5 +191,11 @@ export function useSettings(isAuthenticated: boolean): UseSettingsReturn {
     [api, isAuthenticated, t, failureText]
   );
 
-  return { editorSettings, themeSettings, error, saveSettings, loadSettings };
+  return {
+    editorSettings: current?.editor ?? DEFAULT_EDITOR_SETTINGS,
+    themeSettings: current?.theme ?? DEFAULT_THEME_SETTINGS,
+    error,
+    saveSettings,
+    loadSettings,
+  };
 }

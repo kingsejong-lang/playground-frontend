@@ -343,7 +343,7 @@ export function createKingsejongHoverProvider(monaco: Monaco): monacoEditor.lang
  * Document formatting provider for Kingsejong
  * Formats code with proper indentation and spacing
  */
-export function createKingsejongFormattingProvider(monaco: Monaco): monacoEditor.languages.DocumentFormattingEditProvider {
+export function createKingsejongFormattingProvider(): monacoEditor.languages.DocumentFormattingEditProvider {
   return {
     provideDocumentFormattingEdits: (model, options) => {
       const edits: monacoEditor.languages.TextEdit[] = [];
@@ -540,7 +540,7 @@ export function registerKingsejongLanguage(monaco: Monaco) {
   monaco.languages.setMonarchTokensProvider(kingsejongLanguageId, kingsejongLanguageTokensProvider);
   monaco.languages.registerCompletionItemProvider(kingsejongLanguageId, createKingsejongCompletionProvider(monaco));
   monaco.languages.registerHoverProvider(kingsejongLanguageId, createKingsejongHoverProvider(monaco));
-  monaco.languages.registerDocumentFormattingEditProvider(kingsejongLanguageId, createKingsejongFormattingProvider(monaco));
+  monaco.languages.registerDocumentFormattingEditProvider(kingsejongLanguageId, createKingsejongFormattingProvider());
   monaco.languages.registerDocumentRangeFormattingEditProvider(kingsejongLanguageId, createKingsejongRangeFormattingProvider(monaco));
   monaco.languages.registerOnTypeFormattingEditProvider(kingsejongLanguageId, createKingsejongOnTypeFormattingProvider(monaco));
 }

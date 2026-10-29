@@ -135,7 +135,7 @@ describe('hover', () => {
 });
 
 describe('document formatting', () => {
-  const provider = createKingsejongFormattingProvider(stubMonaco());
+  const provider = createKingsejongFormattingProvider();
   const format = (text: string, options = spaces) => provider.provideDocumentFormattingEdits(model(text), options, token) as monacoEditor.languages.TextEdit[];
 
   it('re-indents nested blocks and keeps blank lines', () => {

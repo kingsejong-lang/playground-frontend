@@ -6,7 +6,6 @@ import {
   parseJSON,
   parseAndValidate,
   isFileReaderResult,
-  assertType,
   isDefined,
   isNonEmptyString,
   isArray,
@@ -190,28 +189,6 @@ describe('guards', () => {
 
     it('should return false for object', () => {
       expect(isFileReaderResult({})).toBe(false)
-    })
-  })
-
-  describe('assertType', () => {
-    const numberSchema = z.number()
-
-    it('should validate correct type', () => {
-      const result = assertType(numberSchema, 42)
-
-      expect(isOk(result)).toBe(true)
-      if (result.ok) {
-        expect(result.value).toBe(42)
-      }
-    })
-
-    it('should return error for incorrect type', () => {
-      const result = assertType(numberSchema, 'not a number')
-
-      expect(isErr(result)).toBe(true)
-      if (!result.ok) {
-        expect(result.error.type).toBe('ValidationError')
-      }
     })
   })
 

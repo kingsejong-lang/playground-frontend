@@ -15,7 +15,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import OutputPanel from '@/features/execution/OutputPanel';
 import FileTabs from '@/features/editor/FileTabs';
 import { EditorSkeleton, type EditorCommand, type InsertRequest, type RevealRequest } from '@/features/editor/CodeEditor';
-import { resolveEntryFile } from '@/features/editor/entry';
+import { useEntryName } from '@/features/editor/entry';
 import { loadDraft, saveDraft } from '@/features/editor/drafts';
 import { useDraft } from '@/features/editor/useDraft';
 import { isPristineWorkspace, starterFileName } from '@/features/editor/workspace';
@@ -135,7 +135,7 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
   /** File that produced the current output; its diagnostics are drawn in the editor. */
   const [runFileId, setRunFileId] = useState<string | null>(null);
 
-  const history = useHistory();
+  const { addItem: addHistoryItem } = useHistory();
   // The backend-down state has its own banner; other language errors show as a request error.
   const backendDown = !!languageError && languageErrorKind === 'unavailable';
   // While the backend is known to be down, its banner already explains a failed run.
@@ -164,10 +164,7 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
   // Workspace and entry file (see features/editor/entry.ts)
   const workspace = useMemo(() => files.map((f) => ({ name: f.name, content: f.content })), [files]);
   const currentLanguage = languages.find((l) => l.id === selectedLanguage);
-  const entryName = resolveEntryFile(
-    workspace.map((f) => f.name),
-    { preferred: entryFile?.name, defaultEntryFile: currentLanguage?.defaultEntryFile }
-  );
+  const entryName = useEntryName(workspace, entryFile?.name, currentLanguage?.defaultEntryFile);
   const entryId = files.find((f) => f.name === entryName)?.id ?? null;
   const running = executing || streaming;
   // Number of runs that have ended (any outcome). Exposed as data-finished-runs for end-to-end tests.
@@ -195,10 +192,17 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
     (preferred: string | undefined) => {
       // With the backend known to be down, Run also tries to reconnect (the banner shows progress).
       if (languageError && languageErrorKind === 'unavailable') retryLanguages();
-      setRunFileId(files.find((f) => f.name === (preferred ?? entryName))?.id ?? null);
-      void runWorkspace(workspace, { preferred }, selectedLanguage, languages, stdin);
+      const runFile = files.find((f) => f.name === (preferred ?? entryName));
+      setRunFileId(runFile?.id ?? null);
+      const language = selectedLanguage;
+      void runWorkspace(workspace, { preferred }, language, languages, stdin).then((result) => {
+        // Every finished run goes to history; cancelled runs and refused requests do not.
+        if (result && result.status !== 'cancelled' && result.status !== 'pending') {
+          addHistoryItem({ language, code: runFile?.content ?? '', output: result, success: result.success });
+        }
+      });
     },
-    [files, entryName, workspace, selectedLanguage, languages, runWorkspace, stdin, languageError, languageErrorKind, retryLanguages]
+    [files, entryName, workspace, selectedLanguage, languages, runWorkspace, stdin, languageError, languageErrorKind, retryLanguages, addHistoryItem]
   );
 
   /** Runs all files from the entry file. */
@@ -320,29 +324,19 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
     if (draft) replaceFiles(draft.files, { entry: draft.entry, active: draft.active });
   }, [loadingLanguages, selectedLanguage, searchParams, replaceFiles]);
 
-  // Save to history when execution completes (cancelled runs are not recorded)
-  useEffect(() => {
-    if (output && !executing && !streaming && output.status !== 'cancelled' && output.status !== 'pending') {
-      history.addItem({
-        language: selectedLanguage,
-        code: files.find((f) => f.id === runFileId)?.content ?? activeFile?.content ?? '',
-        output,
-        success: output.success,
-      });
-    }
-  }, [output, executing, streaming]);
-
-  // Load shared code from URL
+  // Load shared code from URL, once per share id (not again when callbacks change).
+  const loadedShare = useRef<string | null>(null);
   useEffect(() => {
     const shareIdParam = searchParams.get('share');
-    if (shareIdParam) {
+    if (shareIdParam && loadedShare.current !== shareIdParam) {
+      loadedShare.current = shareIdParam;
       loadShared(shareIdParam, (language, sharedFiles, sharedEntry) => {
         setSelectedLanguage(language);
         if (sharedFiles.length > 0) replaceFiles(sharedFiles, { entry: sharedEntry, active: sharedEntry });
         resetExecution();
       });
     }
-  }, [searchParams]);
+  }, [searchParams, loadShared, setSelectedLanguage, replaceFiles, resetExecution]);
 
   const handleStop = useCallback(() => {
     if (running) cancelExecution();
