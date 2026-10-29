@@ -25,6 +25,7 @@ import { AnsiText, countMatches, stripAnsi } from '@/features/execution/ansi-par
 import { Button, IconButton } from '@/components/ui/Button';
 import { KeyCombo } from '@/components/ui/Kbd';
 import { resultText } from './history';
+import { workspacePath } from './paths';
 
 /** Request-level failures the user can fix by trying again. */
 const RETRYABLE: ReadonlySet<RpcFailureKind> = new Set([
@@ -485,7 +486,8 @@ function ResultSummary({ output }: { output: ExecutionResult }) {
           <dl className="flex flex-wrap gap-x-3 text-xs text-fg-muted">
             <Metric label={t('metrics.wall')} value={formatMs(m.wallTimeMs, locale)} />
             {m.cpuTimeMs > 0 && <Metric label={t('metrics.cpu')} value={formatMs(m.cpuTimeMs, locale)} />}
-            <Metric label={t('metrics.memory')} value={formatBytes(m.peakMemoryBytes, locale)} />
+            {/* 0 means "not measured" (e.g. a runtime without memory accounting), not zero bytes. */}
+            {m.peakMemoryBytes > 0 && <Metric label={t('metrics.memory')} value={formatBytes(m.peakMemoryBytes, locale)} />}
             {m.queueTimeMs > 0 && <Metric label={t('metrics.queue')} value={formatMs(m.queueTimeMs, locale)} />}
           </dl>
         )}
@@ -638,7 +640,7 @@ function LinkedText({ text, highlight, onJumpTo }: { text: string; highlight: st
       <button
         key={`l${at}`}
         type="button"
-        onClick={() => onJumpTo({ severity: 'error', message: '', path, line: Number(line), column: Number(column ?? 0), code: '' })}
+        onClick={() => onJumpTo({ severity: 'error', message: '', path: workspacePath(path), line: Number(line), column: Number(column ?? 0), code: '' })}
         className="rounded-xs underline decoration-dotted underline-offset-4 hover:decoration-solid"
         title={t('jumpTo', { location })}
       >

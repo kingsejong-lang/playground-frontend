@@ -103,7 +103,9 @@ export function PlaygroundModals({
       )}
 
       {/* Settings Modal */}
+      {/* Remounted on every open so the form starts from the current settings, without a stale first frame. */}
       <SettingsModal
+        key={showSettings ? 'settings-open' : 'settings-closed'}
         isOpen={showSettings}
         onClose={onCloseSettings}
         onSave={onSaveSettings}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -58,12 +58,32 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(initialEditor || DEFAULT_EDITOR_SETTINGS);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(initialTheme || DEFAULT_THEME_SETTINGS);
 
-  // Re-sync the draft each time the dialog opens.
+  // Sync the draft from the current settings when the dialog opens, and when those
+  // settings change (e.g. a signed-in user's settings arrive) while the user has not
+  // edited anything yet. The page passes new objects on every render, so compare by value.
+  const edited = useRef(false);
+  const initialKey = JSON.stringify([initialEditor ?? null, initialTheme ?? null]);
+  const latestInitial = useRef({ initialEditor, initialTheme });
   useEffect(() => {
-    if (!isOpen) return;
-    if (initialEditor) setEditorSettings(initialEditor);
-    if (initialTheme) setThemeSettings({ ...initialTheme, color_scheme: normalizeColorScheme(initialTheme.color_scheme) });
-  }, [isOpen, initialEditor, initialTheme]);
+    latestInitial.current = { initialEditor, initialTheme };
+  });
+  useEffect(() => {
+    if (isOpen) edited.current = false;
+  }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen || edited.current) return;
+    const { initialEditor: editor, initialTheme: theme } = latestInitial.current;
+    if (editor) setEditorSettings(editor);
+    if (theme) setThemeSettings({ ...theme, color_scheme: normalizeColorScheme(theme.color_scheme) });
+  }, [isOpen, initialKey]);
+  const editEditor = (next: EditorSettings) => {
+    edited.current = true;
+    setEditorSettings(next);
+  };
+  const editTheme = (next: ThemeSettings) => {
+    edited.current = true;
+    setThemeSettings(next);
+  };
 
   const handleSave = () => {
     onSave(editorSettings, themeSettings);
@@ -82,8 +102,8 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
           <Button
             variant="ghost"
             onClick={() => {
-              setEditorSettings(DEFAULT_EDITOR_SETTINGS);
-              setThemeSettings(DEFAULT_THEME_SETTINGS);
+              editEditor(DEFAULT_EDITOR_SETTINGS);
+              editTheme(DEFAULT_THEME_SETTINGS);
             }}
             className="mr-auto"
           >
@@ -117,7 +137,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
               min="10"
               max="24"
               value={editorSettings.font_size}
-              onChange={(e) => setEditorSettings({ ...editorSettings, font_size: Number(e.target.value) })}
+              onChange={(e) => editEditor({ ...editorSettings, font_size: Number(e.target.value) })}
               className="w-full accent-[var(--accent-indigo)]"
             />
           </div>
@@ -129,7 +149,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
             <select
               id={ids.font}
               value={editorSettings.font_family}
-              onChange={(e) => setEditorSettings({ ...editorSettings, font_family: e.target.value })}
+              onChange={(e) => editEditor({ ...editorSettings, font_family: e.target.value })}
               className={FIELD}
             >
               {FONT_OPTIONS.map((f) => (
@@ -156,7 +176,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
               max="8"
               step="2"
               value={editorSettings.tab_size}
-              onChange={(e) => setEditorSettings({ ...editorSettings, tab_size: Number(e.target.value) })}
+              onChange={(e) => editEditor({ ...editorSettings, tab_size: Number(e.target.value) })}
               className="w-full accent-[var(--accent-indigo)]"
             />
           </div>
@@ -173,7 +193,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
             <Switch
               id={ids.auto}
               checked={editorSettings.auto_save}
-              onChange={(v) => setEditorSettings({ ...editorSettings, auto_save: v })}
+              onChange={(v) => editEditor({ ...editorSettings, auto_save: v })}
               describedBy={ids.autoHint}
             />
           </div>
@@ -182,7 +202,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
             <label htmlFor={ids.minimap} className="text-sm text-fg-secondary">
               {t('minimap')}
             </label>
-            <Switch id={ids.minimap} checked={editorSettings.minimap} onChange={(v) => setEditorSettings({ ...editorSettings, minimap: v })} />
+            <Switch id={ids.minimap} checked={editorSettings.minimap} onChange={(v) => editEditor({ ...editorSettings, minimap: v })} />
           </div>
         </fieldset>
 
@@ -195,7 +215,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
             <select
               id={ids.theme}
               value={themeSettings.theme}
-              onChange={(e) => setThemeSettings({ ...themeSettings, theme: e.target.value as ThemeSettings['theme'] })}
+              onChange={(e) => editTheme({ ...themeSettings, theme: e.target.value as ThemeSettings['theme'] })}
               className={FIELD}
             >
               <option value="system">{t('themeSystem')}</option>
@@ -210,7 +230,7 @@ export default function SettingsModal({ isOpen, onClose, onSave, initialEditor, 
             <select
               id={ids.scheme}
               value={normalizeColorScheme(themeSettings.color_scheme)}
-              onChange={(e) => setThemeSettings({ ...themeSettings, color_scheme: e.target.value })}
+              onChange={(e) => editTheme({ ...themeSettings, color_scheme: e.target.value })}
               className={FIELD}
             >
               <option value="sanctuary">{t('schemeSanctuary')}</option>

@@ -28,6 +28,7 @@ export default defineConfig([
     'coverage/**',
     'next-env.d.ts',
     'tests/e2e/report/**',
+    'tests/e2e/report-stack/**',
     'playwright-report/**',
     'test-results/**',
   ]),

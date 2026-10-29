@@ -78,4 +78,13 @@ describe('useSettings', () => {
     expect(second.updateSettings).not.toHaveBeenCalled();
     localStorage.clear();
   });
+
+  it('treats a signed-in user who never saved settings as having the defaults', async () => {
+    // The server answers with zero values (font_size 0, minimap false) until the first save.
+    const { result, getSettings } = setup(true, { getSettings: () => ({ settings: { fontSize: 0, minimap: false, theme: Theme.UNSPECIFIED } }) });
+    await waitFor(() => expect(getSettings).toHaveBeenCalled());
+    await act(async () => {});
+    expect(result.current.editorSettings).toEqual(DEFAULT_EDITOR_SETTINGS);
+    expect(result.current.themeSettings.theme).toBe(DEFAULT_THEME_SETTINGS.theme);
+  });
 });

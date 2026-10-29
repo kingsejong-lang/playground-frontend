@@ -117,4 +117,20 @@ describe('useCodeExecution', () => {
     await act(() => result.current.runWorkspace([{ name: 'z.ksj', content: 'x' }], { preferred: 'gone.ksj' }, 'kingsejong', languages));
     expect((runSpy.mock.calls[1][0] as { entryFile: string }).entryFile).toBe('z.ksj');
   });
+
+  it('sends program input as UTF-8 stdin', async () => {
+    const { result, runSpy } = setup(async function* () {
+      yield { seq: 1n, event: { case: 'finished', value: { status: ExecutionStatus.SUCCEEDED, exitCode: 0 } } };
+    });
+    await act(() => result.current.runWorkspace([{ name: 'main.ksj', content: 'x' }], {}, 'kingsejong', languages, '세종\n42\n'));
+    const req = runSpy.mock.calls[0][0] as { stdin: Uint8Array };
+    expect(new TextDecoder().decode(req.stdin)).toBe('세종\n42\n');
+  });
+
+  it('rejects stdin over the 64 KiB limit without calling the server', async () => {
+    const { result, runSpy } = setup(async function* () {});
+    await act(() => result.current.runWorkspace([{ name: 'main.ksj', content: 'x' }], {}, 'kingsejong', languages, 'a'.repeat(70 * 1024)));
+    expect(runSpy).not.toHaveBeenCalled();
+    expect(result.current.error).toMatch(/stdin/);
+  });
 });
