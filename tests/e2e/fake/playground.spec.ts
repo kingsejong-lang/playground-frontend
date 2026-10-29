@@ -129,3 +129,23 @@ test('opening the file list for the first time keeps the editor', async ({ page 
   await expect(page.getByText('문제가 생겼어요')).toHaveCount(0);
   expect(await editorValue(page)).toBe('출력("그대로")');
 });
+
+test('finished runs are recorded in history; a stopped run is not', async ({ page }) => {
+  await openPlayground(page);
+  await setEditor(page, '출력("기록됨")\n');
+  await runAndWait(page);
+  await headerButton(page, '실행 기록').click();
+  const sheet = page.getByRole('dialog', { name: '실행 기록' });
+  await expect(sheet.getByRole('button', { name: /^이 기록을 편집기로 불러오기/ })).toHaveCount(1);
+  await expect(sheet).toContainText('출력("기록됨")');
+  await sheet.getByRole('button', { name: '닫기' }).first().click();
+
+  await page.goto('/ko?fake=slow');
+  await expect.poll(() => editorValue(page), { timeout: 30_000 }).not.toBe('');
+  await runButton(page).click();
+  await expect(stopButton(page)).toBeVisible();
+  await stopButton(page).click();
+  await expect(runButton(page)).toBeVisible();
+  await headerButton(page, '실행 기록').click();
+  await expect(page.getByRole('dialog', { name: '실행 기록' }).getByRole('button', { name: /^이 기록을 편집기로 불러오기/ })).toHaveCount(1);
+});

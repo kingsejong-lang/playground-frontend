@@ -67,7 +67,7 @@ describe('useCodeExecution', () => {
         ctx.signal.addEventListener('abort', () => resolve());
       });
     });
-    let done: Promise<void> = Promise.resolve();
+    let done: Promise<unknown> = Promise.resolve();
     act(() => {
       done = result.current.execute('출력(1)', 'kingsejong', languages);
     });
@@ -167,7 +167,7 @@ describe('useCodeExecution live state', () => {
       yield { seq: 2n, event: { case: 'output', value: { stream: 1, data: enc.encode('partial\n') } } };
       await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve()));
     });
-    let done: Promise<void> = Promise.resolve();
+    let done: Promise<unknown> = Promise.resolve();
     act(() => {
       done = result.current.execute('출력(1)', 'kingsejong', languages);
     });
@@ -194,7 +194,7 @@ describe('useCodeExecution live state', () => {
       yield { seq: 1n, event: { case: 'output', value: { stream: 1, data: enc.encode('second\n') } } };
       yield { seq: 2n, event: { case: 'finished', value: { status: ExecutionStatus.SUCCEEDED, exitCode: 0 } } };
     });
-    let first: Promise<void> = Promise.resolve();
+    let first: Promise<unknown> = Promise.resolve();
     act(() => {
       first = result.current.execute('출력(1)', 'kingsejong', languages);
     });
@@ -221,7 +221,7 @@ describe('useCodeExecution Stop', () => {
       } as never)
     );
     const { result } = renderHook(() => useCodeExecution(), { wrapper });
-    let done: Promise<void> = Promise.resolve();
+    let done: Promise<unknown> = Promise.resolve();
     act(() => {
       done = result.current.execute('출력(1)', 'kingsejong', languages);
     });

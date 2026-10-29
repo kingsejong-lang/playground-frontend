@@ -94,17 +94,6 @@ export function isFileReaderResult(
 }
 
 /**
- * Safe type assertion with validation
- */
-export function assertType<T>(
-  schema: z.ZodSchema<T>,
-  value: unknown,
-  errorMessage?: string
-): Result<T, ReturnType<typeof validationError>> {
-  return validate(schema, value);
-}
-
-/**
  * Type guard for checking if value is defined (not null or undefined)
  */
 export function isDefined<T>(value: T | null | undefined): value is T {

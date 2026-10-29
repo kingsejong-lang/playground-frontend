@@ -11,6 +11,7 @@
  * Usage:
  *   const { files, entryFile } = buildRunFiles(workspace, { preferred: entryName, defaultEntryFile: lang.defaultEntryFile });
  */
+import { useMemo } from 'react';
 
 export interface EntryOptions {
   preferred?: string;
@@ -32,4 +33,19 @@ export interface RunFiles {
 export function buildRunFiles(files: readonly { name: string; content: string }[], options: EntryOptions): RunFiles {
   const sources = files.map((f) => ({ path: f.name, content: f.content }));
   return { files: sources, entryFile: resolveEntryFile(sources.map((f) => f.path), options) };
+}
+
+/**
+ * The resolved entry file name, recomputed only when the files, the user's choice
+ * or the language default change.
+ *
+ * Usage:
+ *   const entryName = useEntryName(workspace, entryFile?.name, language?.defaultEntryFile);
+ */
+export function useEntryName(
+  files: readonly { name: string }[],
+  preferred: string | undefined,
+  defaultEntryFile: string | undefined
+): string | undefined {
+  return useMemo(() => resolveEntryFile(files.map((f) => f.name), { preferred, defaultEntryFile }), [files, preferred, defaultEntryFile]);
 }

@@ -21,50 +21,57 @@ export function TemplateGallery({ isOpen, onClose, selectedLanguage, onSelectTem
   const t = useTranslations('templates');
   const tErr = useTranslations('errors');
   const failureText = useFailureText();
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [listing, setListing] = useState(false);
+  // The catalogue comes from the server (ListTemplates returns titles only). It is
+  // fetched each time the dialog opens; the last list for this language stays
+  // visible meanwhile, and the skeleton shows only when there is none yet.
+  const [catalogue, setCatalogue] = useState<{ languageId: string; templates: Template[]; error: string | null } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
 
-  // The catalogue comes from the server (ListTemplates returns titles only).
   useEffect(() => {
     if (!isOpen || !selectedLanguage) return;
     let cancelled = false;
-    setListing(true);
-    setError(null);
     api.language
       .listTemplates({ languageId: selectedLanguage })
-      .then((res) => !cancelled && setTemplates(res.templates))
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setTemplates([]);
-        setError(`${tErr('loadTemplates')} ${failureText(err)}`);
-      })
-      .finally(() => !cancelled && setListing(false));
+      .then((res) => ({ languageId: selectedLanguage, templates: res.templates, error: null }))
+      .catch((err: unknown) => ({ languageId: selectedLanguage, templates: [], error: `${tErr('loadTemplates')} ${failureText(err)}` }))
+      .then((next) => {
+        if (!cancelled) setCatalogue(next);
+      });
     return () => {
       cancelled = true;
     };
   }, [api, isOpen, selectedLanguage, tErr, failureText]);
 
+  const current = catalogue?.languageId === selectedLanguage ? catalogue : null;
+  const listing = !current;
+  const templates = current?.templates ?? [];
+  const error = selectError ?? current?.error ?? null;
+
+  const close = () => {
+    setSelectError(null);
+    onClose();
+  };
+
   const handleSelectTemplate = async (template: Template) => {
     setLoadingId(template.id);
-    setError(null);
+    setSelectError(null);
     try {
       const res = await api.language.getTemplate({
         languageId: template.languageId || selectedLanguage,
         templateId: template.id,
       });
       onSelectTemplate(firstFileContent(res.template?.files?.files ?? [], res.template?.entryFile));
-      onClose();
+      close();
     } catch (err) {
-      setError(`${tErr('loadTemplate')} ${failureText(err)}`);
+      setSelectError(`${tErr('loadTemplate')} ${failureText(err)}`);
     } finally {
       setLoadingId(null);
     }
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} title={t('title')} description={t('description')} size="lg">
+    <Dialog open={isOpen} onClose={close} title={t('title')} description={t('description')} size="lg">
       {error && (
         <p className="mb-4 rounded-md bg-err-soft px-3 py-2 text-sm text-err" role="alert">
           {error}

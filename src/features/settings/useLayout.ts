@@ -5,8 +5,9 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { STORAGE_KEYS } from '@/lib/constants';
+import { createLocalStore, useLocalStore } from '@/lib/local-store';
 
 export type LayoutOrientation = 'horizontal' | 'vertical';
 
@@ -32,85 +33,44 @@ const DEFAULT_SETTINGS: LayoutSettings = {
   outputSize: 50,
 };
 
-/**
- * Get stored layout settings or default
- */
-function getStoredLayout(): LayoutSettings {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS;
-
+/** Parses stored layout settings; anything unreadable falls back to the defaults. */
+function parseLayout(raw: string | null): LayoutSettings {
+  if (!raw) return DEFAULT_SETTINGS;
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.LAYOUT);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        orientation: parsed.orientation || DEFAULT_SETTINGS.orientation,
-        editorSize: parsed.editorSize || DEFAULT_SETTINGS.editorSize,
-        outputSize: parsed.outputSize || DEFAULT_SETTINGS.outputSize,
-      };
-    }
-  } catch (e) {
-    console.error('Failed to read layout from localStorage:', e);
-  }
-
-  return DEFAULT_SETTINGS;
-}
-
-/**
- * Save layout settings to localStorage
- */
-function saveLayout(settings: LayoutSettings) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    localStorage.setItem(STORAGE_KEYS.LAYOUT, JSON.stringify(settings));
-  } catch (e) {
-    console.error('Failed to save layout to localStorage:', e);
+    const parsed = JSON.parse(raw);
+    return {
+      orientation: parsed.orientation === 'vertical' ? 'vertical' : DEFAULT_SETTINGS.orientation,
+      editorSize: Number(parsed.editorSize) || DEFAULT_SETTINGS.editorSize,
+      outputSize: Number(parsed.outputSize) || DEFAULT_SETTINGS.outputSize,
+    };
+  } catch {
+    return DEFAULT_SETTINGS;
   }
 }
+
+const layoutStore = createLocalStore(STORAGE_KEYS.LAYOUT, parseLayout, DEFAULT_SETTINGS);
 
 export function useLayout(): UseLayoutReturn {
-  const [settings, setSettings] = useState<LayoutSettings>(DEFAULT_SETTINGS);
-
-  // Initialize from localStorage on mount
-  useEffect(() => {
-    const stored = getStoredLayout();
-    setSettings(stored);
-  }, []);
+  const settings = useLocalStore(layoutStore);
 
   const setOrientation = useCallback((orientation: LayoutOrientation) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, orientation };
-      saveLayout(newSettings);
-      return newSettings;
-    });
+    layoutStore.set({ ...layoutStore.getSnapshot(), orientation });
   }, []);
 
   const toggleOrientation = useCallback(() => {
-    setSettings(prev => {
-      const newOrientation: LayoutOrientation =
-        prev.orientation === 'horizontal' ? 'vertical' : 'horizontal';
-      const newSettings = { ...prev, orientation: newOrientation };
-      saveLayout(newSettings);
-      return newSettings;
-    });
+    const current = layoutStore.getSnapshot();
+    layoutStore.set({ ...current, orientation: current.orientation === 'horizontal' ? 'vertical' : 'horizontal' });
   }, []);
 
   const setPanelSizes = useCallback((editorSize: number, outputSize: number) => {
-    setSettings(prev => {
-      const newSettings = {
-        ...prev,
-        editorSize: Math.max(10, Math.min(90, editorSize)),
-        outputSize: Math.max(10, Math.min(90, outputSize)),
-      };
-      saveLayout(newSettings);
-      return newSettings;
+    layoutStore.set({
+      ...layoutStore.getSnapshot(),
+      editorSize: Math.max(10, Math.min(90, editorSize)),
+      outputSize: Math.max(10, Math.min(90, outputSize)),
     });
   }, []);
 
-  const resetLayout = useCallback(() => {
-    setSettings(DEFAULT_SETTINGS);
-    saveLayout(DEFAULT_SETTINGS);
-  }, []);
+  const resetLayout = useCallback(() => layoutStore.set(DEFAULT_SETTINGS), []);
 
   return {
     orientation: settings.orientation,

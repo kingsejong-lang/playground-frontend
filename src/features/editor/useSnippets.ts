@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { createLocalStore, useLocalStore } from '@/lib/local-store';
 import { parseSnippets, type Snippet, type SnippetFilter } from './snippet-types';
 import {
   sanitizeSnippetTitle,
@@ -32,47 +33,29 @@ interface UseSnippetsReturn {
   clearAll: () => void;
 }
 
-/**
- * Load snippets from localStorage
- */
-function loadSnippets(): Snippet[] {
-  if (typeof window === 'undefined') return [];
+const NO_SNIPPETS: Snippet[] = Object.freeze([]) as unknown as Snippet[];
 
+/** Stored snippets; corrupt or invalid entries are dropped. */
+function parseStoredSnippets(raw: string | null): Snippet[] {
+  if (!raw) return NO_SNIPPETS;
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.SNIPPETS);
-    if (stored) {
-      return parseSnippets(JSON.parse(stored));
-    }
+    return parseSnippets(JSON.parse(raw));
   } catch {
-    // Corrupt storage: start empty.
+    return NO_SNIPPETS; // corrupt storage: start empty
   }
-
-  return [];
 }
 
-/**
- * Save snippets to localStorage
- */
-function saveSnippets(snippets: Snippet[]) {
-  if (typeof window === 'undefined') return;
+const snippetsStore = createLocalStore(STORAGE_KEYS.SNIPPETS, parseStoredSnippets, NO_SNIPPETS);
 
-  try {
-    localStorage.setItem(STORAGE_KEYS.SNIPPETS, JSON.stringify(snippets));
-  } catch (error) {
-    console.error('Failed to save snippets:', error);
-  }
+/** Applies a change to the stored snippets. */
+function updateSnippets(change: (snippets: Snippet[]) => Snippet[]) {
+  snippetsStore.set(change(snippetsStore.getSnapshot()));
 }
 
 export function useSnippets(): UseSnippetsReturn {
-  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const snippets = useLocalStore(snippetsStore);
   const [filter, setFilter] = useState<SnippetFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Load snippets on mount
-  useEffect(() => {
-    const loaded = loadSnippets();
-    setSnippets(loaded);
-  }, []);
 
   // Add snippet
   const addSnippet = useCallback((snippet: Omit<Snippet, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -106,46 +89,34 @@ export function useSnippets(): UseSnippetsReturn {
       updatedAt: Date.now(),
     };
 
-    setSnippets(prev => {
-      const updated = [...prev, newSnippet];
-      saveSnippets(updated);
-      return updated;
-    });
+    updateSnippets((list) => [...list, newSnippet]);
   }, []);
 
   // Update snippet
   const updateSnippet = useCallback((id: string, updates: Partial<Snippet>) => {
-    setSnippets(prev => {
-      const updated = prev.map(snippet =>
+    updateSnippets((list) =>
+      list.map(snippet =>
         snippet.id === id
           ? { ...snippet, ...updates, updatedAt: Date.now() }
           : snippet
-      );
-      saveSnippets(updated);
-      return updated;
-    });
+      )
+    );
   }, []);
 
   // Delete snippet
   const deleteSnippet = useCallback((id: string) => {
-    setSnippets(prev => {
-      const updated = prev.filter(snippet => snippet.id !== id);
-      saveSnippets(updated);
-      return updated;
-    });
+    updateSnippets((list) => list.filter(snippet => snippet.id !== id));
   }, []);
 
   // Toggle favorite
   const toggleFavorite = useCallback((id: string) => {
-    setSnippets(prev => {
-      const updated = prev.map(snippet =>
+    updateSnippets((list) =>
+      list.map(snippet =>
         snippet.id === id
           ? { ...snippet, isFavorite: !snippet.isFavorite, updatedAt: Date.now() }
           : snippet
-      );
-      saveSnippets(updated);
-      return updated;
-    });
+      )
+    );
   }, []);
 
   // Get snippet by ID
@@ -164,11 +135,7 @@ export function useSnippets(): UseSnippetsReturn {
       const parsed: unknown = JSON.parse(data);
       if (!Array.isArray(parsed)) throw new Error('not an array');
       const imported = parseSnippets(parsed);
-      setSnippets(prev => {
-        const updated = [...prev, ...imported];
-        saveSnippets(updated);
-        return updated;
-      });
+      updateSnippets((list) => [...list, ...imported]);
     } catch {
       throw new Error('Invalid snippet data');
     }
@@ -176,8 +143,7 @@ export function useSnippets(): UseSnippetsReturn {
 
   // Clear all snippets
   const clearAll = useCallback(() => {
-    setSnippets([]);
-    saveSnippets([]);
+    snippetsStore.set([]);
   }, []);
 
   // Filter snippets

@@ -6,13 +6,14 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // React Compiler diagnostics (eslint-plugin-react-hooks 7) flag patterns that
-    // predate the upgrade (hydration-safe localStorage reads in effects). They are
-    // warnings until the UI pass refactors those hooks (docs/specs/01, T1.7).
+    // React Compiler diagnostics (eslint-plugin-react-hooks 7) and the hook
+    // dependency check fail the build: storage-backed state is read with
+    // useSyncExternalStore (src/lib/local-store.ts), not copied in effects.
     rules: {
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/preserve-manual-memoization': 'error',
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
   {

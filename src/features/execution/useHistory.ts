@@ -2,10 +2,10 @@
  * Custom hook for managing execution history
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useLocalStore } from '@/lib/local-store';
 import {
   HistoryItem,
-  getHistoryItems,
   addHistoryItem,
   deleteHistoryItem,
   clearHistory,
@@ -13,6 +13,7 @@ import {
   exportHistoryToJson,
   importHistoryFromJson,
   getHistoryStats,
+  historyStore,
 } from '@/features/execution/history';
 
 export interface UseHistoryReturn {
@@ -40,40 +41,28 @@ export interface UseHistoryReturn {
  * Hook for managing execution history
  */
 export function useHistory(): UseHistoryReturn {
-  const [items, setItems] = useState<HistoryItem[]>([]);
+  const items = useLocalStore(historyStore);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'success' | 'failed'>('all');
 
-  // Refresh items from localStorage
-  const refresh = useCallback(() => {
-    const loadedItems = getHistoryItems();
-    setItems(loadedItems);
-  }, []);
-
-  // Load items on mount
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  // Re-read storage (e.g. after another tab or an older client wrote it).
+  const refresh = useCallback(() => historyStore.notify(), []);
 
   // Add new history item
   const addItem = useCallback((item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
-    const newItem = addHistoryItem(item);
-    refresh();
-    return newItem;
-  }, [refresh]);
+    return addHistoryItem(item);
+  }, []);
 
   // Delete history item
   const deleteItem = useCallback((id: string) => {
     deleteHistoryItem(id);
-    refresh();
-  }, [refresh]);
+  }, []);
 
   // Clear all history
   const clearAll = useCallback(() => {
     clearHistory();
-    refresh();
-  }, [refresh]);
+  }, []);
 
   // Export to JSON
   const exportToJson = useCallback(() => {
@@ -92,8 +81,7 @@ export function useHistory(): UseHistoryReturn {
   // Import from JSON
   const importFromJsonCallback = useCallback((jsonString: string) => {
     importHistoryFromJson(jsonString);
-    refresh();
-  }, [refresh]);
+  }, []);
 
   // Apply filters to items
   const filteredItems = (() => {

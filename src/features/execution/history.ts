@@ -7,6 +7,7 @@
  */
 
 import { z } from '@/lib/zod';
+import { createLocalStore } from '@/lib/local-store';
 import type { ExecutionResult } from '@/lib/rpc';
 
 /**
@@ -151,26 +152,33 @@ const HISTORY_STORAGE_KEY = 'playground_execution_history';
  */
 const MAX_HISTORY_ITEMS = 100;
 
+const NO_ITEMS: HistoryItem[] = Object.freeze([]) as unknown as HistoryItem[];
+
+/** Stored history, validated, newest first; corrupt storage reads as empty. */
+function parseStoredHistory(raw: string | null): HistoryItem[] {
+  if (!raw) return NO_ITEMS;
+  try {
+    return parseHistoryItems(JSON.parse(raw)).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  } catch {
+    return NO_ITEMS;
+  }
+}
+
+/**
+ * The history as an external store (see lib/local-store.ts). The functions in
+ * this module write localStorage directly and call `historyStore.notify()`.
+ */
+export const historyStore = createLocalStore(HISTORY_STORAGE_KEY, parseStoredHistory, NO_ITEMS);
+
 /**
  * Get all history items from localStorage
  */
 export function getHistoryItems(): HistoryItem[] {
+  if (typeof window === 'undefined') return [];
   try {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-
-    const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-
-    const parsed = parseHistoryItems(JSON.parse(stored));
-
-    // Sort by timestamp descending (newest first)
-    return parsed.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // A copy: callers may change the array, the store's snapshot must not change.
+    return [...parseStoredHistory(localStorage.getItem(HISTORY_STORAGE_KEY))];
   } catch {
-    // Corrupt storage: behave as empty history.
     return [];
   }
 }
@@ -197,6 +205,7 @@ export function addHistoryItem(item: Omit<HistoryItem, 'id' | 'timestamp'>): His
     // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(limitedItems));
+      historyStore.notify();
     }
 
     return newItem;
@@ -216,6 +225,7 @@ export function deleteHistoryItem(id: string): void {
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
+      historyStore.notify();
     }
   } catch (error) {
     console.error('Failed to delete history item:', error);
@@ -230,6 +240,7 @@ export function clearHistory(): void {
   try {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(HISTORY_STORAGE_KEY);
+      historyStore.notify();
     }
   } catch (error) {
     console.error('Failed to clear history:', error);
@@ -328,6 +339,7 @@ export function importHistoryFromJson(jsonString: string): void {
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(sortedItems));
+      historyStore.notify();
     }
   } catch (error) {
     console.error('Failed to import history:', error);

@@ -49,7 +49,8 @@ interface UseCodeExecutionReturn {
   errorKind: RpcFailureKind | null;
   /** Seconds the server asked us to wait before retrying (rate limit / overload). */
   retryAfterSeconds: number | null;
-  execute: (code: string, language: string, languages: readonly Language[]) => Promise<void>;
+  /** Each run function resolves with the final result, or null when nothing ran (validation, refused request, superseded). */
+  execute: (code: string, language: string, languages: readonly Language[]) => Promise<ExecutionResult | null>;
   /** Runs every workspace file; the entry follows entry.ts (choice, language default, first file). */
   runWorkspace: (
     files: readonly { name: string; content: string }[],
@@ -57,8 +58,8 @@ interface UseCodeExecutionReturn {
     language: string,
     languages: readonly Language[],
     stdin?: string
-  ) => Promise<void>;
-  executeFiles: (input: RunFilesInput) => Promise<void>;
+  ) => Promise<ExecutionResult | null>;
+  executeFiles: (input: RunFilesInput) => Promise<ExecutionResult | null>;
   cancel: () => void;
   reset: () => void;
 }
@@ -117,12 +118,12 @@ export function useCodeExecution(): UseCodeExecutionReturn {
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   const executeFiles = useCallback(
-    async ({ languageId, files, entryFile, stdin }: RunFilesInput) => {
+    async ({ languageId, files, entryFile, stdin }: RunFilesInput): Promise<ExecutionResult | null> => {
       if (!files.some((f) => f.content.trim())) {
         setError(t('emptyCode'));
         setErrorKind(null);
         setRetryAfterSeconds(null);
-        return;
+        return null;
       }
 
       const request = create(RunRequestSchema, {
@@ -140,7 +141,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
         setError(failureText(err));
         setErrorKind(toRpcFailure(err).kind);
           setRetryAfterSeconds(toRpcFailure(err).retryAfterSeconds ?? null);
-        return;
+        return null;
       }
 
       controllerRef.current?.abort();
@@ -168,7 +169,9 @@ export function useCodeExecution(): UseCodeExecutionReturn {
           onUpdate: throttle.push,
         });
         throttle.cancel();
-        if (controllerRef.current === controller) setOutput(result);
+        if (controllerRef.current !== controller) return null; // reset or replaced by a newer run
+        setOutput(result);
+        return result;
       } catch (err) {
         throttle.cancel();
         if (controllerRef.current === controller) {
@@ -177,6 +180,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
           setErrorKind(toRpcFailure(err).kind);
           setRetryAfterSeconds(toRpcFailure(err).retryAfterSeconds ?? null);
         }
+        return null;
       } finally {
         if (controllerRef.current === controller) {
           controllerRef.current = null;
@@ -189,30 +193,29 @@ export function useCodeExecution(): UseCodeExecutionReturn {
   );
 
   const execute = useCallback(
-    async (code: string, language: string, languages: readonly Language[]) => {
+    async (code: string, language: string, languages: readonly Language[]): Promise<ExecutionResult | null> => {
       if (!code.trim()) {
         setError(t('emptyCode'));
         setErrorKind(null);
         setRetryAfterSeconds(null);
-        return;
+        return null;
       }
       const lang = resolveLanguage(language, languages);
       if (!lang && languages.length === 0 && language) {
         // The language list never loaded (backend down): send the run anyway so the
         // user gets the real server state (and a retry) instead of "language not found".
         const path = `main${FALLBACK_EXTENSIONS[language.split('_')[0]] ?? '.txt'}`;
-        await executeFiles({ languageId: language, files: [{ path, content: code }], entryFile: path });
-        return;
+        return executeFiles({ languageId: language, files: [{ path, content: code }], entryFile: path });
       }
       if (!lang) {
         setError(t('languageNotFound'));
         setErrorKind(null);
         setRetryAfterSeconds(null);
-        return;
+        return null;
       }
       // Behaviour preserved: the active file is sent alone, as the entry file.
       const path = getMainFilename(lang);
-      await executeFiles({ languageId: language, files: [{ path, content: code }], entryFile: path });
+      return executeFiles({ languageId: language, files: [{ path, content: code }], entryFile: path });
     },
     [executeFiles, t]
   );
@@ -224,17 +227,17 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       language: string,
       languages: readonly Language[],
       stdin?: string
-    ) => {
+    ): Promise<ExecutionResult | null> => {
       const lang = resolveLanguage(language, languages);
       if (!lang && languages.length > 0) {
         setError(t('languageNotFound'));
         setErrorKind(null);
         setRetryAfterSeconds(null);
-        return;
+        return null;
       }
       // Without a language list (backend down) the first file is the entry; the server reports the real state.
       const run = buildRunFiles(files, { preferred: entry.preferred, defaultEntryFile: lang?.defaultEntryFile });
-      await executeFiles({ languageId: language, files: run.files, entryFile: run.entryFile, stdin });
+      return executeFiles({ languageId: language, files: run.files, entryFile: run.entryFile, stdin });
     },
     [executeFiles, t]
   );
