@@ -136,6 +136,8 @@
     "truncated": "{bytes} of {stream} were dropped after the output limit.",
     "gaps": "Part of the output was lost in transit ({count} events missing).",
     "reconnected": "The connection dropped; the final status was fetched afterwards. Output after the drop is not shown.",
+    "resumed": "Reconnected · output from while the connection was down was replayed.",
+    "replayGap": "Reconnected, but {count, plural, one {# earlier event was} other {# earlier events were}} no longer kept on the server and cannot be shown.",
     "lostConnection": "Lost connection to the server; the final status is unknown.",
     "stream": {
       "stdout": "standard output",

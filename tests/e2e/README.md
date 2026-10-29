@@ -27,6 +27,7 @@ make runtime-images && docker compose up -d --build   # gateway http://localhost
 # here
 npm run test:e2e:stack            # builds with NEXT_PUBLIC_API_URL=http://localhost:8080, runs `next start -p 3000`
 E2E_SKIP_BUILD=1 npm run test:e2e:stack   # reuse an existing build
+E2E_RESUME_RUN=1 npm run test:e2e:stack   # also run the output-replay test (needs ResumeRun in the backend)
 ```
 
 - Use `localhost` for both the app and the API. The session cookies are `Secure; SameSite=Strict`; browsers

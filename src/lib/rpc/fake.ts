@@ -9,8 +9,13 @@
  *
  * Failure modes are chosen per request with the page's query string:
  *   ?fake=compile_error | runtime_error | timeout | memory | output_limit |
- *         queued | slow | drop | internal | overloaded | rate_limited |
+ *         queued | slow | internal | overloaded | rate_limited |
  *         unavailable | languages_error | no_templates | slow_boot
+ *   Dropped Run streams (the run goes on; ResumeRun replays from a buffer):
+ *         drop           resumed, every event replayed
+ *         drop_gap       resumed, but the oldest missed events were evicted (ReplayGap)
+ *         drop_noreplay  ResumeRun fails with REPLAY_UNAVAILABLE (falls back to GetExecution)
+ *         drop_legacy    ResumeRun is not implemented (as on older servers)
  *   ?fake_user=1   start signed in
  *
  * Usage (dev):
@@ -261,11 +266,7 @@ async function* runEvents(req: RunRequest, signal: AbortSignal): AsyncGenerator<
 
   yield next({ case: 'started', value: { phase: RunEvent_Phase.RUN } });
 
-  if (mode === 'drop') {
-    yield out('첫 줄은 도착했습니다\n');
-    await sleep(200, signal);
-    throw networkError();
-  }
+  if (mode.startsWith('drop')) yield out('첫 줄은 도착했습니다\n');
 
   if (mode === 'slow') {
     for (let i = 1; ; i++) {
@@ -308,6 +309,55 @@ async function* runEvents(req: RunRequest, signal: AbortSignal): AsyncGenerator<
       return;
     default:
       yield finished(ExecutionStatus.SUCCEEDED, 0, 180 + lines.length * 140);
+  }
+}
+
+/** Events of runs whose stream was dropped, kept for ResumeRun (the real server keeps 1 MiB for 5 minutes). */
+interface ReplayBuffer {
+  events: RunEvent[];
+  done: boolean;
+}
+const replay = new Map<string, ReplayBuffer>();
+
+/**
+ * Streams a run until its first output line, then drops the connection the way
+ * a failed fetch does. The run keeps going in the background into a buffer.
+ */
+async function* droppingRun(source: AsyncGenerator<RunEvent>): AsyncGenerator<RunEvent> {
+  const buffer: ReplayBuffer = { events: [], done: false };
+  // Pull events by hand: `for await ... break` would close the source and stop the run.
+  for (let step = await source.next(); !step.done; step = await source.next()) {
+    const ev = step.value;
+    buffer.events.push(ev);
+    if (ev.event.case === 'accepted') replay.set(ev.event.value.executionId, buffer);
+    yield ev;
+    if (ev.event.case === 'output') break;
+  }
+  void (async () => {
+    for (let step = await source.next(); !step.done; step = await source.next()) buffer.events.push(step.value);
+    buffer.done = true;
+  })();
+  await sleep(200);
+  throw networkError();
+}
+
+/** Replays buffered events after `afterSeq`, then follows the run live until it ends. */
+async function* replayEvents(buffer: ReplayBuffer, afterSeq: bigint, evictOldest: boolean): AsyncGenerator<RunEvent> {
+  await sleep(150);
+  let next = afterSeq + 1n;
+  if (evictOldest) {
+    // Pretend the two oldest missed events no longer fit in the buffer.
+    next += 2n;
+    yield create(RunEventSchema, { event: { case: 'replayGap', value: { firstAvailableSeq: next } } });
+  }
+  for (;;) {
+    const pending = buffer.events.filter((e) => e.seq >= next);
+    for (const ev of pending) {
+      yield ev;
+      next = ev.seq + 1n;
+    }
+    if (buffer.done && buffer.events.every((e) => e.seq < next)) return;
+    await sleep(100);
   }
 }
 
@@ -367,7 +417,15 @@ export function createFakeTransport(): Transport {
 
     service(ExecutionService, {
       run(req, ctx) {
-        return runEvents(req, ctx.signal);
+        const mode = fakeMode();
+        if (!mode.startsWith('drop')) return runEvents(req, ctx.signal);
+        return droppingRun(runEvents(req, new AbortController().signal));
+      },
+      resumeRun(req) {
+        const mode = fakeMode();
+        if (mode === 'drop_legacy') throw new ConnectError('ResumeRun is not implemented', Code.Unimplemented);
+        if (mode === 'drop_noreplay' || !replay.has(req.executionId)) throw detailError(Code.FailedPrecondition, ErrorDetail_Reason.REPLAY_UNAVAILABLE);
+        return replayEvents(replay.get(req.executionId)!, req.afterSeq, mode === 'drop_gap');
       },
       async cancel() {
         return { cancelled: true };
