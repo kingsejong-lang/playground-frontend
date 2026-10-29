@@ -33,6 +33,8 @@ export interface RunFilesInput {
   languageId: string;
   files: { path: string; content: string }[];
   entryFile?: string;
+  /** Program input, sent as UTF-8 bytes (RunRequest.stdin, at most 64 KiB). */
+  stdin?: string;
 }
 
 interface UseCodeExecutionReturn {
@@ -53,7 +55,8 @@ interface UseCodeExecutionReturn {
     files: readonly { name: string; content: string }[],
     entry: Pick<EntryOptions, 'preferred'>,
     language: string,
-    languages: readonly Language[]
+    languages: readonly Language[],
+    stdin?: string
   ) => Promise<void>;
   executeFiles: (input: RunFilesInput) => Promise<void>;
   cancel: () => void;
@@ -114,7 +117,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   const executeFiles = useCallback(
-    async ({ languageId, files, entryFile }: RunFilesInput) => {
+    async ({ languageId, files, entryFile, stdin }: RunFilesInput) => {
       if (!files.some((f) => f.content.trim())) {
         setError(t('emptyCode'));
         setErrorKind(null);
@@ -126,6 +129,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
         languageId,
         files: { files },
         entryFile: entryFile ?? '',
+        stdin: stdin ? new TextEncoder().encode(stdin) : undefined,
         clientRequestId: newClientRequestId(),
       });
       try {
@@ -218,7 +222,8 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       files: readonly { name: string; content: string }[],
       entry: Pick<EntryOptions, 'preferred'>,
       language: string,
-      languages: readonly Language[]
+      languages: readonly Language[],
+      stdin?: string
     ) => {
       const lang = resolveLanguage(language, languages);
       if (!lang && languages.length > 0) {
@@ -229,7 +234,7 @@ export function useCodeExecution(): UseCodeExecutionReturn {
       }
       // Without a language list (backend down) the first file is the entry; the server reports the real state.
       const run = buildRunFiles(files, { preferred: entry.preferred, defaultEntryFile: lang?.defaultEntryFile });
-      await executeFiles({ languageId: language, files: run.files, entryFile: run.entryFile });
+      await executeFiles({ languageId: language, files: run.files, entryFile: run.entryFile, stdin });
     },
     [executeFiles, t]
   );

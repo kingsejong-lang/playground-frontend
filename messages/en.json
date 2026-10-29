@@ -348,5 +348,13 @@
     "saved": "Draft saved {time}",
     "savedLong": "Draft saved in this browser at {time}",
     "restored": "Restored the draft saved in this browser"
+  },
+  "stdin": {
+    "title": "Program input (stdin)",
+    "label": "Text passed to the program as standard input",
+    "placeholder": "One value per line",
+    "hint": "Sent from the start on every run.",
+    "tooLarge": "Input is over 64 KB and cannot be sent.",
+    "lines": "{count, plural, one {# line} other {# lines}}"
   }
 }

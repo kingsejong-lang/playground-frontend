@@ -106,7 +106,7 @@ const LANGUAGES: LanguageInit[] = [
     defaultEntryFile: 'main.ksj',
     editorLanguage: 'kingsejong',
     defaultTemplateId: 'hello_world',
-    capabilities: [Language_Capability.RUN, Language_Capability.FORMAT],
+    capabilities: [Language_Capability.RUN, Language_Capability.STDIN, Language_Capability.FORMAT],
     limits,
   },
   {
@@ -117,7 +117,7 @@ const LANGUAGES: LanguageInit[] = [
     defaultEntryFile: 'main.py',
     editorLanguage: 'python',
     defaultTemplateId: 'hello_world',
-    capabilities: [Language_Capability.RUN],
+    capabilities: [Language_Capability.RUN, Language_Capability.STDIN],
     limits,
   },
   {
@@ -129,7 +129,7 @@ const LANGUAGES: LanguageInit[] = [
     editorLanguage: 'go',
     // Empty on purpose: the client falls back to "hello_world".
     defaultTemplateId: '',
-    capabilities: [Language_Capability.RUN, Language_Capability.COMPILE, Language_Capability.FORMAT],
+    capabilities: [Language_Capability.RUN, Language_Capability.STDIN, Language_Capability.COMPILE, Language_Capability.FORMAT],
     limits,
   },
 ];
@@ -144,12 +144,12 @@ const TEMPLATE_CODE: Record<string, Record<string, { title: string; description:
     loops: {
       title: '반복문',
       description: '1부터 5까지 세며 구구단 한 줄을 출력합니다',
-      code: '반복 i = 1 부터 5 까지 {\n    출력("2 x", i, "=", 2 * i)\n}\n',
+      code: '정수 i\ni가 1부터 5까지 {\n    출력("2 x", i, "=", 2 * i)\n}\n',
     },
     functions: {
       title: '함수',
       description: '함수를 정의하고 호출하는 방법',
-      code: '함수 인사(이름) {\n    반환 "안녕하세요, " + 이름 + "님"\n}\n\n출력(인사("세종"))\n',
+      code: '인사 = 함수(이름) {\n    반환 "안녕하세요, " + 이름 + "님"\n}\n\n출력(인사("세종"))\n',
     },
   },
   python: {
@@ -276,6 +276,9 @@ async function* runEvents(req: RunRequest, signal: AbortSignal): AsyncGenerator<
   }
 
   const lines = fakeStdout(code);
+  // Echo program input so stdin can be checked without a backend.
+  const input = req.stdin.length ? new TextDecoder().decode(req.stdin) : '';
+  for (const line of input.split('\n').filter(Boolean)) lines.push(`입력: ${line}`);
   for (const line of lines) {
     await sleep(140, signal);
     yield out(`${line}\n`);

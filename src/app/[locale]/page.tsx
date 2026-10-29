@@ -13,6 +13,7 @@ import { EditorSkeleton, type EditorCommand, type RevealRequest } from '@/featur
 import { resolveEntryFile } from '@/features/editor/entry';
 import { loadDraft, saveDraft } from '@/features/editor/drafts';
 import { useDraft } from '@/features/editor/useDraft';
+import { isPristineWorkspace, starterFileName } from '@/features/editor/workspace';
 import { GLOBAL_SHORTCUTS } from '@/features/editor/shortcuts';
 import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { PlaygroundModals } from './components/PlaygroundModals';
@@ -41,6 +42,9 @@ import { useLayout } from '@/features/settings/useLayout';
 import type { HistoryItem } from '@/features/execution/history';
 import type { DiagnosticView } from '@/lib/rpc';
 import { useFormatCode } from '@/features/editor/useFormatCode';
+import { StdinPanel } from '@/features/execution/StdinPanel';
+import { workspacePath } from '@/features/execution/paths';
+import { Language_Capability } from '@kingsejong-lang/playground-proto';
 
 function PlaygroundContent() {
   const searchParams = useSearchParams();
@@ -116,6 +120,8 @@ function PlaygroundContent() {
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const [showSnippetLibrary, setShowSnippetLibrary] = useState(false);
   const [reveal, setReveal] = useState<RevealRequest | null>(null);
+  const [stdin, setStdin] = useState('');
+  const [showStdin, setShowStdin] = useState(false);
   /** File that produced the current output; its diagnostics are drawn in the editor. */
   const [runFileId, setRunFileId] = useState<string | null>(null);
 
@@ -154,6 +160,13 @@ function PlaygroundContent() {
   );
   const entryId = files.find((f) => f.name === entryName)?.id ?? null;
   const running = executing || streaming;
+  // Number of runs that have ended (any outcome). Exposed as data-finished-runs for end-to-end tests.
+  const [finishedRuns, setFinishedRuns] = useState(0);
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !running) setFinishedRuns((n) => n + 1);
+    wasRunning.current = running;
+  }, [running]);
 
   // Local drafts: Mod+S and, with the auto-save setting, after edits settle.
   const { saveNow: saveDraftNow, lastSavedAt } = useDraft({
@@ -173,9 +186,9 @@ function PlaygroundContent() {
       // With the backend known to be down, Run also tries to reconnect (the banner shows progress).
       if (languageError && languageErrorKind === 'unavailable') retryLanguages();
       setRunFileId(files.find((f) => f.name === (preferred ?? entryName))?.id ?? null);
-      void runWorkspace(workspace, { preferred }, selectedLanguage, languages);
+      void runWorkspace(workspace, { preferred }, selectedLanguage, languages, stdin);
     },
-    [files, entryName, workspace, selectedLanguage, languages, runWorkspace, languageError, languageErrorKind, retryLanguages]
+    [files, entryName, workspace, selectedLanguage, languages, runWorkspace, stdin, languageError, languageErrorKind, retryLanguages]
   );
 
   /** Runs all files from the entry file. */
@@ -245,7 +258,7 @@ function PlaygroundContent() {
 
   const handleJumpTo = useCallback(
     (d: DiagnosticView) => {
-      const byName = files.find((f) => f.name === d.path);
+      const byName = files.find((f) => f.name === workspacePath(d.path));
       const target = byName?.id ?? runFileId ?? activeFileId;
       if (target && target !== activeFileId) setActiveFile(target);
       setReveal({ line: d.line, column: d.column, nonce: Date.now() });
@@ -269,10 +282,13 @@ function PlaygroundContent() {
         if (selectedLanguage) saveDraft(selectedLanguage, { files: workspace, entry: entryFile?.name, active: activeFile?.name });
         replaceFiles(draft.files, { entry: draft.entry, active: draft.active });
         toast.info(t('draft.restored'));
+      } else if (isPristineWorkspace(workspace, defaultCode)) {
+        // Untouched starter code: start the new language from its own starter file (filled in below).
+        replaceFiles([{ name: starterFileName(languages.find((l) => l.id === languageId)), content: '' }]);
       }
       changeLanguage(languageId);
     },
-    [selectedLanguage, workspace, entryFile, activeFile, replaceFiles, changeLanguage, toast, t]
+    [selectedLanguage, workspace, entryFile, activeFile, replaceFiles, changeLanguage, toast, t, defaultCode, languages]
   );
 
   // On first load (not a shared link), pick up this language's local draft.
@@ -358,7 +374,7 @@ function PlaygroundContent() {
       : 'code-sanctuary-light';
   const direction = narrow ? 'vertical' : orientation;
   // Every file was sent, so a diagnostic belongs to the file its path names (no path: the entry file).
-  const runDiagnostics = output?.diagnostics.filter((d) => (d.path ? d.path === activeFile?.name : runFileId === activeFileId));
+  const runDiagnostics = output?.diagnostics.filter((d) => (d.path ? workspacePath(d.path) === activeFile?.name : runFileId === activeFileId));
 
   return (
     <div className="flex h-dvh flex-col bg-void">
@@ -399,7 +415,7 @@ function PlaygroundContent() {
         runKeys={runKeys}
       />
 
-      <main className="flex min-h-0 flex-1 overflow-hidden">
+      <main className="flex min-h-0 flex-1 overflow-hidden" data-finished-runs={finishedRuns}>
         {showFileTree && (
           <FileTree
             isOpen={showFileTree}
@@ -448,6 +464,9 @@ function PlaygroundContent() {
                   reveal={reveal}
                 />
               </div>
+              {(!currentLanguage || currentLanguage.capabilities.includes(Language_Capability.STDIN)) && (
+                <StdinPanel value={stdin} onChange={setStdin} open={showStdin} onToggle={() => setShowStdin((v) => !v)} />
+              )}
             </section>
           </Panel>
 
