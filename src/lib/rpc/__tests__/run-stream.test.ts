@@ -9,7 +9,7 @@ import {
   RunEvent_Stream,
   type RunEvent,
 } from '@kingsejong-lang/playground-proto';
-import { RunAccumulator, runSession, type ExecutionResult } from '../run-stream';
+import { ACCEPT_GRACE_MS, RunAccumulator, runSession, type ExecutionResult } from '../run-stream';
 import { createApiTransport } from '../transport';
 
 const enc = new TextEncoder();
@@ -316,5 +316,95 @@ describe('runSession output replay (ResumeRun)', () => {
     const result = await runSession({ client, request, signal: controller.signal, sleep: noSleep });
     expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ executionId: 'exec_0123456789abcdefghijkl' }), expect.anything());
     expect(result.status).toBe('cancelled');
+  });
+});
+
+describe('runSession Stop sends an explicit Cancel', () => {
+  const id = 'exec_0123456789abcdefghijkl';
+
+  /** A run that streams Accepted (optionally after a delay) and output until its stream is closed. */
+  function liveClient(opts: { acceptAfter?: Promise<void>; never?: boolean } = {}) {
+    const cancel = vi.fn().mockResolvedValue({ cancelled: true });
+    const closed = vi.fn();
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run(_req: unknown, ctx: { signal: AbortSignal }) {
+          ctx.signal.addEventListener('abort', closed);
+          await opts.acceptAfter;
+          if (!opts.never) yield accepted();
+          yield out(2, 'working\n');
+          await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve()));
+        },
+        cancel,
+      } as never)
+    );
+    return { client, cancel, closed };
+  }
+
+  it('cancels the run on the server and closes the stream when stopped mid-stream', async () => {
+    const { client, cancel } = liveClient();
+    const ac = new AbortController();
+    const pending = runSession({ client, request, signal: ac.signal, onUpdate: (r) => r.chunks.length && ac.abort() });
+    const result = await pending;
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ executionId: id }), expect.anything());
+    expect(result.status).toBe('cancelled');
+    expect(result.chunks[0].text).toBe('working\n');
+  });
+
+  it('stopped before Accepted: keeps the stream open for the id, then cancels', async () => {
+    let accept!: () => void;
+    const { client, cancel } = liveClient({ acceptAfter: new Promise<void>((r) => (accept = r)) });
+    const ac = new AbortController();
+    const pending = runSession({ client, request, signal: ac.signal });
+    ac.abort();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(cancel).not.toHaveBeenCalled();
+    accept();
+    const result = await pending;
+    expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ executionId: id }), expect.anything());
+    expect(result.status).toBe('cancelled');
+  });
+
+  it('gives up waiting for Accepted after the grace period', async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, cancel } = liveClient({ acceptAfter: new Promise<void>(() => {}) });
+      const ac = new AbortController();
+      const pending = runSession({ client, request, signal: ac.signal });
+      ac.abort();
+      await vi.advanceTimersByTimeAsync(ACCEPT_GRACE_MS + 10);
+      const result = await pending;
+      expect(cancel).not.toHaveBeenCalled();
+      expect(result.status).toBe('cancelled');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still ends as cancelled when Cancel fails', async () => {
+    const { client, cancel } = liveClient();
+    cancel.mockRejectedValue(new ConnectError('down', Code.Unavailable));
+    const ac = new AbortController();
+    const result = await runSession({ client, request, signal: ac.signal, onUpdate: (r) => r.executionId && ac.abort() });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe('cancelled');
+  });
+
+  it('does not call Cancel for a run that finished normally', async () => {
+    const cancel = vi.fn();
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run() {
+          yield accepted();
+          yield finished(2);
+        },
+        cancel,
+      } as never)
+    );
+    const ac = new AbortController();
+    await runSession({ client, request, signal: ac.signal });
+    ac.abort(); // e.g. the component unmounts afterwards
+    expect(cancel).not.toHaveBeenCalled();
   });
 });

@@ -9,7 +9,9 @@
  *   last received seq), which replays the missed events (de-duplicated by seq)
  *   and continues live. When the server cannot replay (REPLAY_UNAVAILABLE) or
  *   does not implement ResumeRun yet, it falls back to polling GetExecution
- *   for the final status. Aborting while reconnecting calls Cancel.
+ *   for the final status.
+ * - Aborting (Stop) always sends Cancel(execution_id): closing the stream alone
+ *   does not stop the run on the server, so ResumeRun can recover it.
  *
  * Usage:
  *   const ac = new AbortController();
@@ -320,6 +322,15 @@ export interface RunSessionOptions {
 
 export const DEFAULT_RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 8000] as const;
 
+/**
+ * After Stop is pressed before Accepted, how long the stream is kept open to
+ * learn the execution id so the run can be cancelled explicitly.
+ */
+export const ACCEPT_GRACE_MS = 3000;
+
+/** Longest wait for the Cancel response before the run is shown as cancelled. */
+export const CANCEL_WAIT_MS = 1000;
+
 export const LOST_CONNECTION_MESSAGE = 'Lost connection to the server; the final status is unknown.';
 
 function defaultSleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -347,17 +358,51 @@ export async function runSession(opts: RunSessionOptions): Promise<ExecutionResu
   const acc = new RunAccumulator();
   const emit = () => onUpdate?.(acc.snapshot());
 
+  // Closing the stream does not stop the run on the server (so ResumeRun can
+  // recover it after a network drop); only an explicit Cancel does. Stop
+  // (aborting `signal`) therefore sends Cancel(execution_id) and then closes the
+  // stream. Before Accepted the id is unknown: the stream stays open for up to
+  // ACCEPT_GRACE_MS to receive it.
+  const stream = new AbortController();
+  let cancelRequested = false;
+  let cancelCall: Promise<unknown> | null = null;
+  const sendCancel = (executionId: string) => {
+    // Not tied to `signal`, which is already aborted. Best effort: errors are ignored.
+    cancelCall ??= client.cancel({ executionId }).catch(() => {});
+  };
+  const onAbort = () => {
+    cancelRequested = true;
+    if (acc.executionId) {
+      sendCancel(acc.executionId);
+      stream.abort();
+    } else {
+      setTimeout(() => stream.abort(), ACCEPT_GRACE_MS);
+    }
+  };
+  if (signal.aborted) onAbort();
+  else signal.addEventListener('abort', onAbort, { once: true });
+  /** Ends as cancelled once Cancel was answered (or after CANCEL_WAIT_MS, so Stop never hangs). */
+  const cancelled = async () => {
+    if (cancelCall) await Promise.race([cancelCall, new Promise((resolve) => setTimeout(resolve, CANCEL_WAIT_MS))]);
+    acc.end('cancelled', 'Cancelled', acc.snapshot().reconnected);
+    emit();
+    return acc.snapshot();
+  };
+
   try {
     // timeoutMs: 0 disables the transport's unary default; the server bounds the stream.
-    for await (const ev of client.run(request, { signal, timeoutMs: 0 })) {
+    for await (const ev of client.run(request, { signal: stream.signal, timeoutMs: 0 })) {
       if (acc.apply(ev)) emit();
       if (acc.isFinished) break;
+      if (cancelRequested && acc.executionId) {
+        sendCancel(acc.executionId);
+        break;
+      }
     }
   } catch (err) {
-    if (signal.aborted || isAbort(err)) {
-      acc.end('cancelled', 'Cancelled');
-      emit();
-      return acc.snapshot();
+    if (cancelRequested || isAbort(err)) {
+      if (acc.executionId) sendCancel(acc.executionId);
+      return cancelled();
     }
     if (!acc.executionId) throw err; // rejected before Accepted: an RPC error
     const failure = toRpcFailure(err);
@@ -368,7 +413,11 @@ export async function runSession(opts: RunSessionOptions): Promise<ExecutionResu
     }
   }
 
-  if (acc.isFinished) return acc.snapshot();
+  if (acc.isFinished) {
+    signal.removeEventListener('abort', onAbort);
+    return acc.snapshot();
+  }
+  if (cancelRequested) return cancelled();
 
   if (!acc.executionId) {
     // Stream closed without Accepted: contract violation; nothing to reconnect to.
@@ -384,15 +433,8 @@ export async function runSession(opts: RunSessionOptions): Promise<ExecutionResu
   for (const delay of delays) {
     await sleep(delay, signal);
     if (signal.aborted) {
-      // No stream to abort any more; ask the server to stop the run.
-      try {
-        await client.cancel({ executionId });
-      } catch {
-        // best effort; the server also stops idle runs
-      }
-      acc.end('cancelled', 'Cancelled', true);
-      emit();
-      return acc.snapshot();
+      sendCancel(executionId);
+      return cancelled();
     }
     if (replay) {
       let resumedNow = false;
@@ -424,6 +466,10 @@ export async function runSession(opts: RunSessionOptions): Promise<ExecutionResu
     } catch {
       // keep polling until retries are exhausted
     }
+  }
+  if (signal.aborted) {
+    sendCancel(executionId);
+    return cancelled();
   }
   acc.end('unknown', LOST_CONNECTION_MESSAGE, true);
   emit();
