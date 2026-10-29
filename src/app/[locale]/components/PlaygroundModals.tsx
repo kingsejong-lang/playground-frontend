@@ -45,7 +45,7 @@ interface PlaygroundModalsProps {
   showTemplateGallery: boolean;
   onCloseTemplateGallery: () => void;
   selectedLanguage: string;
-  onSelectTemplate: (code: string) => void;
+  onSelectTemplate: (template: { files: { name: string; content: string }[]; entryFile: string }) => void;
   // Snippets
   showSnippetLibrary: boolean;
   onCloseSnippetLibrary: () => void;

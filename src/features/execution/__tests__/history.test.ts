@@ -101,3 +101,62 @@ describe('history store', () => {
     expect(getHistoryItems()).toHaveLength(100);
   });
 });
+
+describe('multi-file history', () => {
+  const ok = { ...emptyResult(), status: 'succeeded' as const, success: true };
+
+  it('keeps every file and the entry file of a run', () => {
+    addHistoryItem({
+      language: 'kingsejong',
+      files: [
+        { name: 'main.ksj', content: '가져오기 "util"' },
+        { name: 'util.ksj', content: '두배 = 함수(x) { 반환 x * 2 }' },
+      ],
+      entryFile: 'main.ksj',
+      code: '가져오기 "util"',
+      output: ok,
+      success: true,
+    });
+    const [item] = getHistoryItems();
+    expect(item.files.map((f) => f.name)).toEqual(['main.ksj', 'util.ksj']);
+    expect(item.entryFile).toBe('main.ksj');
+    // Search looks into every file, not only the entry file.
+    expect(searchHistory('두배')).toHaveLength(1);
+    expect(searchHistory('util.ksj')).toHaveLength(1);
+  });
+
+  it('migrates entries recorded with only the entry code to one main file', () => {
+    localStorage.setItem(
+      'playground_execution_history',
+      JSON.stringify([
+        { id: 'old1', timestamp: '2026-01-01T00:00:00Z', language: 'python_3_12', code: 'print(1)', output: ok, success: true },
+        { id: 'old2', timestamp: '2026-01-02T00:00:00Z', language: 'cobol', code: 'x', output: ok, success: true },
+      ])
+    );
+    const items = getHistoryItems();
+    expect(items.find((i) => i.id === 'old1')).toMatchObject({ files: [{ name: 'main.py', content: 'print(1)' }], entryFile: 'main.py' });
+    expect(items.find((i) => i.id === 'old2')).toMatchObject({ files: [{ name: 'main.txt', content: 'x' }], entryFile: 'main.txt' });
+  });
+
+  it('repairs an entry file that is not among the files', () => {
+    localStorage.setItem(
+      'playground_execution_history',
+      JSON.stringify([{ id: 'x', timestamp: '2026-01-01T00:00:00Z', language: 'go', code: 'a', files: [{ name: 'a.go', content: 'a' }], entryFile: 'gone.go', output: ok, success: true }])
+    );
+    expect(getHistoryItems()[0].entryFile).toBe('a.go');
+  });
+
+  it('drops the oldest runs when storage is full, keeping the new one', () => {
+    for (let i = 0; i < 8; i++) addHistoryItem({ language: 'go', code: `run ${i}`, output: ok, success: true });
+    const real = Storage.prototype.setItem;
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (JSON.parse(value).length > 3) throw new DOMException('full', 'QuotaExceededError');
+      real.call(this, key, value);
+    });
+    addHistoryItem({ language: 'go', code: 'newest', output: ok, success: true });
+    setItem.mockRestore();
+    const items = getHistoryItems();
+    expect(items[0].code).toBe('newest');
+    expect(items.length).toBeLessThanOrEqual(3);
+  });
+});

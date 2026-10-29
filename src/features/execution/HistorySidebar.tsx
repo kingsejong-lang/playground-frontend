@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { CheckCircle2, Download, Trash2, Upload, XCircle } from 'lucide-react';
+import { CheckCircle2, Download, Files, Trash2, Upload, XCircle } from 'lucide-react';
 import { useHistory } from '@/features/execution/useHistory';
 import { HistoryItem } from '@/features/execution/history';
 import { useToast } from '@/hooks/useToast';
@@ -153,7 +153,9 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
                       onClose();
                     }}
                     className="block w-full rounded-lg p-3 pr-11 text-left"
-                    aria-label={`${t('load')}: ${getLanguageName(item.language, languages)}, ${item.success ? t('succeeded') : t('notSucceeded')}, ${truncateCode(item.code)}`}
+                    aria-label={`${t('load')}: ${getLanguageName(item.language, languages)}, ${item.success ? t('succeeded') : t('notSucceeded')}${
+                      item.files.length > 1 ? `, ${t('otherFiles', { entry: item.entryFile, count: item.files.length - 1 })}` : ''
+                    }, ${truncateCode(item.code)}`}
                   >
                     <span className="flex items-center gap-2">
                       {item.success ? (
@@ -164,6 +166,12 @@ export default function HistorySidebar({ isOpen, onClose, onLoadHistory, languag
                       <span className="text-sm font-medium text-fg">{getLanguageName(item.language, languages)}</span>
                     </span>
                     <span className="mt-1.5 block truncate font-mono text-xs text-fg-secondary">{truncateCode(item.code)}</span>
+                    {item.files.length > 1 && (
+                      <span className="mt-1 flex items-center gap-1.5 text-xs text-fg-muted">
+                        <Files className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{t('otherFiles', { entry: item.entryFile, count: item.files.length - 1 })}</span>
+                      </span>
+                    )}
                     <span className="mt-1.5 flex items-center justify-between text-xs text-fg-muted">
                       <span>{formatRelativeTime(item.timestamp, locale)}</span>
                       <span className="tabular-nums">{item.output.metrics ? `${item.output.metrics.wallTimeMs}ms` : ''}</span>

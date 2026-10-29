@@ -26,7 +26,13 @@ describe('TemplateGallery', () => {
     await act(async () => fireEvent.click(loops));
     // A template without its own language id is fetched for the selected language.
     expect(getTemplate).toHaveBeenCalledWith(expect.objectContaining({ languageId: 'kingsejong', templateId: 'loops' }), expect.anything());
-    expect(onSelectTemplate).toHaveBeenCalledWith('출력("loops")');
+    expect(onSelectTemplate).toHaveBeenCalledWith({
+      files: [
+        { name: 'lib.ksj', content: 'lib' },
+        { name: 'main.ksj', content: '출력("loops")' },
+      ],
+      entryFile: 'main.ksj',
+    });
     expect(onClose).toHaveBeenCalled();
   });
 

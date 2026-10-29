@@ -253,7 +253,8 @@
     "confirmTitle": "기록을 모두 지울까요?",
     "confirmBody": "실행 기록 {count}개가 영구히 삭제돼요. 되돌릴 수 없어요.",
     "succeeded": "성공",
-    "notSucceeded": "실패"
+    "notSucceeded": "실패",
+    "otherFiles": "{entry} 외 {count}개 파일"
   },
   "settings": {
     "title": "설정",
