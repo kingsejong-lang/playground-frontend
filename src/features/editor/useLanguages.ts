@@ -14,9 +14,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Language } from '@kingsejong-lang/playground-proto';
-import { toRpcFailure, useRpc, type ApiClients, type RpcFailureKind } from '@/lib/rpc';
+import { toRpcFailure, useRpc, type ApiClients, type InitialLanguages, type RpcFailureKind } from '@/lib/rpc';
 import { useFailureText } from '@/hooks/useFailureText';
 import { firstFileContent } from './templates';
+import { defaultTemplateId, FALLBACK_TEMPLATE_ID, pickDefaultLanguage, PREFERRED_DEFAULTS } from './language-defaults';
+
+export { defaultTemplateId, FALLBACK_TEMPLATE_ID, pickDefaultLanguage };
 
 const DEFAULT_CODE = {
   python: `# 킹세종 플레이그라운드에 오신 것을 환영합니다
@@ -50,31 +53,12 @@ func main() {
 `,
 } as const;
 
-/** Template id used when a language does not name its own default template. */
-export const FALLBACK_TEMPLATE_ID = 'hello_world';
-
-/** Preferred default language ids, in order (new contract id first, then the legacy id). */
-const PREFERRED_DEFAULTS = ['kingsejong', 'kingsejong_v0_3'];
-
 /** Built-in starter code for a language id ("python_3_12" and "python" share the same code). */
 export function defaultCodeFor(languageId: string): string {
   for (const family of Object.keys(DEFAULT_CODE) as (keyof typeof DEFAULT_CODE)[]) {
     if (languageId === family || languageId.startsWith(`${family}_`)) return DEFAULT_CODE[family];
   }
   return '// Start coding...';
-}
-
-export function pickDefaultLanguage(langs: readonly Language[]): Language | undefined {
-  for (const id of PREFERRED_DEFAULTS) {
-    const found = langs.find((l) => l.id === id);
-    if (found) return found;
-  }
-  return langs.find((l) => l.id.startsWith('kingsejong')) ?? langs[0];
-}
-
-/** The template that seeds a new editor for this language. */
-export function defaultTemplateId(language: Pick<Language, 'defaultTemplateId'> | undefined): string {
-  return language?.defaultTemplateId || FALLBACK_TEMPLATE_ID;
 }
 
 /** Starter code from the server template, or the built-in sample when that fails. */
@@ -106,20 +90,37 @@ interface UseLanguagesReturn {
   retrying: boolean;
 }
 
-export function useLanguages(): UseLanguagesReturn {
+/** Selection and starter code from server-rendered data (see lib/rpc/initial.ts). */
+function initialState(initial: InitialLanguages | null | undefined) {
+  if (!initial) return null;
+  const language = pickDefaultLanguage(initial.languages);
+  if (!language) return null;
+  const starter = initial.starter?.languageId === language.id ? firstFileContent(initial.starter.files, initial.starter.entryFile) : '';
+  return { languages: initial.languages, selected: language.id, code: starter || defaultCodeFor(language.id) };
+}
+
+/**
+ * @param initial Languages rendered on the server. When given, the first render
+ *   already has them and no request is made until retry().
+ */
+export function useLanguages(initial?: InitialLanguages | null): UseLanguagesReturn {
   const api = useRpc();
   const t = useTranslations('errors');
   const failureText = useFailureText();
-  const [languages, setLanguages] = useState<Language[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
-  const [code, setCode] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
+  // Read once: later renders keep their own state.
+  const [seed] = useState(() => initialState(initial));
+  const [languages, setLanguages] = useState<Language[]>(seed?.languages ?? []);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(seed?.selected ?? '');
+  const [code, setCode] = useState<string>(seed?.code ?? '');
+  const [loading, setLoading] = useState<boolean>(!seed);
   const [error, setError] = useState<string | null>(null);
   const [errorKind, setErrorKind] = useState<RpcFailureKind | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
+    // Server-rendered data covers the first load; retry() (attempt > 0) fetches again.
+    if (seed && attempt === 0) return;
     let cancelled = false;
     (async () => {
       try {
@@ -151,7 +152,7 @@ export function useLanguages(): UseLanguagesReturn {
     return () => {
       cancelled = true;
     };
-  }, [api, attempt, t, failureText]);
+  }, [api, attempt, t, failureText, seed]);
 
   const changeLanguage = useCallback(
     (languageId: string) => {
