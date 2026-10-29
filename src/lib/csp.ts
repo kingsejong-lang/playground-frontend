@@ -6,9 +6,6 @@
  *   const policy = buildCsp({ nonce, isDev: false, apiOrigin: 'https://api.example.com', embed: false });
  */
 
-/** Monaco is loaded at runtime by @monaco-editor/loader from this CDN. */
-export const MONACO_CDN = 'https://cdn.jsdelivr.net';
-
 export interface CspOptions {
   nonce: string;
   isDev: boolean;
@@ -31,14 +28,15 @@ export function buildCsp({ nonce, isDev, apiOrigin, embed }: CspOptions): string
   const api = toOrigin(apiOrigin);
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
-    // 'strict-dynamic': scripts loaded by nonce'd scripts (Monaco's loader) are trusted;
+    // 'strict-dynamic': scripts loaded by nonce'd scripts (Monaco's loader, served from
+    // /monaco on this origin) are trusted;
     // host allow-lists are ignored by CSP3 browsers. React dev tooling needs eval in dev only.
     'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(isDev ? ["'unsafe-eval'"] : [])],
     // Monaco and React style attributes inject inline styles.
-    'style-src': ["'self'", "'unsafe-inline'", MONACO_CDN],
+    'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:'],
-    'font-src': ["'self'", 'data:', MONACO_CDN],
-    'connect-src': ["'self'", api, MONACO_CDN, ...(isDev ? ['ws://localhost:3000', 'ws://127.0.0.1:3000'] : [])],
+    'font-src': ["'self'", 'data:'],
+    'connect-src': ["'self'", api, ...(isDev ? ['ws://localhost:3000', 'ws://127.0.0.1:3000'] : [])],
     'worker-src': ["'self'", 'blob:'],
     'frame-src': ["'none'"],
     'frame-ancestors': embed ? ['*'] : ["'none'"],

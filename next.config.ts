@@ -41,7 +41,11 @@ const nextConfig: NextConfig = {
     if (isProduction) {
       headers.push({ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' });
     }
-    return [{ source: '/:path*', headers }];
+    return [
+      { source: '/:path*', headers },
+      // Self-hosted Monaco (scripts/copy-monaco.mjs): the version is in the path, so it never changes.
+      { source: '/monaco/:version/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
+    ];
   },
 };
 
