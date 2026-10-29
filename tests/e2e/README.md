@@ -10,8 +10,9 @@ Two suites share the helpers in `helpers.ts`:
 ## Fake backend (no services needed)
 
 ```bash
-npx playwright install --only-shell chromium   # once
-npm run test:e2e                               # starts `next dev` itself
+npx playwright install --only-shell chromium firefox webkit   # once
+npm run test:e2e                               # starts `next dev` itself; Chromium, Firefox and WebKit
+npm run test:e2e -- --project fake-chromium    # one browser (CI runs one job per browser)
 npm run test:e2e:report
 ```
 

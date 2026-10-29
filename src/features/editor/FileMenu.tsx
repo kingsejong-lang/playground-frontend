@@ -2,8 +2,8 @@
 
 /**
  * Context menu for a file (tab or file-list row): set as entry file, rename, close/delete.
- * Opens on right-click, the ContextMenu key or Shift+F10; it is a native popover,
- * so Esc and clicking elsewhere close it.
+ * Opens on right-click, the ContextMenu key or Shift+F10. It is a manual popover
+ * (top layer); Esc, a click elsewhere or moving focus out of it closes it.
  *
  * Usage:
  *   const menu = useFileMenu();
@@ -50,22 +50,53 @@ export function FileMenu({ menu, entryFileId, fileName, onSetEntry, onRename, on
   const ref = useRef<HTMLDivElement>(null);
   const { state, close } = menu;
 
+  // A manual popover with its own light dismiss. With popover="auto", Firefox and
+  // Safari closed the menu as soon as the right-click that opened it ended (its
+  // pointerup counted as a click outside), so the menu never appeared there.
   useEffect(() => {
     const el = ref.current;
     if (!el || !state) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     try {
       el.showPopover();
     } catch {
-      // Popover API unavailable: the element still renders (absolutely positioned).
+      // Popover API unavailable: the element still renders (fixed position).
     }
     el.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-  }, [state]);
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!el.contains(e.target as Node)) close();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      close();
+      opener?.focus();
+    };
+    const onFocusOut = (e: FocusEvent) => {
+      if (e.relatedTarget instanceof Node && !el.contains(e.relatedTarget)) close();
+    };
+    // From the next task on, so nothing of the gesture that opened the menu can close it.
+    const timer = setTimeout(() => document.addEventListener('pointerdown', onPointerDown, true));
+    document.addEventListener('keydown', onKeyDown, true);
+    el.addEventListener('focusout', onFocusOut);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown, true);
+      el.removeEventListener('focusout', onFocusOut);
+      try {
+        el.hidePopover();
+      } catch {
+        // already hidden, or no Popover API
+      }
+    };
+  }, [state, close]);
 
   if (!state) return null;
   const item =
     'flex h-9 w-full items-center gap-3 rounded-md px-3 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg disabled:opacity-50 disabled:hover:bg-transparent';
   const act = (fn: (id: string) => void) => () => {
-    ref.current?.hidePopover?.();
     close();
     fn(state.fileId);
   };
@@ -73,12 +104,12 @@ export function FileMenu({ menu, entryFileId, fileName, onSetEntry, onRename, on
   return (
     <div
       ref={ref}
-      popover="auto"
-      onToggle={(e) => {
-        if ((e as unknown as ToggleEvent).newState === 'closed') close();
-      }}
+      popover="manual"
+      // Focusable, so a mouse press on an item keeps focus inside the menu. Safari does
+      // not focus buttons on click and would otherwise move focus to the editor section.
+      tabIndex={-1}
       aria-label={t('menu', { name: fileName(state.fileId) })}
-      className="fixed m-0 w-56 rounded-lg border border-hair bg-raised p-1.5 text-fg shadow-raised"
+      className="fixed m-0 w-56 rounded-lg outline-none border border-hair bg-raised p-1.5 text-fg shadow-raised"
       style={{ inset: 'auto', left: Math.min(state.x, window.innerWidth - 232), top: Math.min(state.y, window.innerHeight - 140) }}
     >
       <button type="button" className={item} onClick={act(onSetEntry)} disabled={entryFileId === state.fileId}>

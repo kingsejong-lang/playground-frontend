@@ -30,9 +30,15 @@ jobs:
         run: npm audit --audit-level=low
 
   e2e:
-    name: End-to-end (fake backend)
+    # One job per browser, in parallel. Firefox and WebKit run only this
+    # fake-backend suite; the real-stack suite stays on Chromium.
+    name: End-to-end (fake backend, ${{ matrix.browser }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -48,22 +54,22 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-shell-${{ runner.os }}-${{ steps.pw.outputs.version }}
-      - name: Install Chromium
+          key: playwright-${{ matrix.browser }}-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install ${{ matrix.browser }}
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps --only-shell chromium
-      - name: Install Chromium system dependencies
+        # Chromium: the headless shell is enough and much smaller than the full browser.
+        run: npx playwright install --with-deps ${{ matrix.browser == 'chromium' && '--only-shell' || '' }} ${{ matrix.browser }}
+      - name: Install ${{ matrix.browser }} system dependencies
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps ${{ matrix.browser }}
       # Starts `next dev` with NEXT_PUBLIC_RPC_FAKE=1 (playwright.config.ts); no backend is needed.
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --project fake-${{ matrix.browser }}
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-fake
+          name: playwright-report-fake-${{ matrix.browser }}
           path: |
             tests/e2e/report
             test-results
           retention-days: 7
-
