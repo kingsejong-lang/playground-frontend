@@ -26,7 +26,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'fake-chromium', use: { ...devices['Desktop Chrome'], locale: 'ko-KR' } }],
+  // Firefox and WebKit run only this fake-backend suite (not the @stack suite), each
+  // in its own CI job: `npx playwright test --project fake-firefox`.
+  projects: [
+    { name: 'fake-chromium', use: { ...devices['Desktop Chrome'], locale: 'ko-KR' } },
+    { name: 'fake-firefox', use: { ...devices['Desktop Firefox'], locale: 'ko-KR' } },
+    { name: 'fake-webkit', use: { ...devices['Desktop Safari'], locale: 'ko-KR' } },
+  ],
   webServer: {
     command: `npx next dev -p ${port}`,
     url: `http://localhost:${port}/ko`,

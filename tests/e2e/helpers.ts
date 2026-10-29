@@ -14,10 +14,10 @@ export const tab = (page: Page, name: string) =>
 /** Header buttons (the same actions also exist, hidden, in the "more" menu). */
 export const headerButton = (page: Page, name: string | RegExp) => page.locator('header nav').getByRole('button', { name });
 
-/** Opens /ko (plus query) and waits until the editor holds code. */
-export async function openPlayground(page: Page, query = '') {
-  await page.goto(`/ko${query}`);
-  await expect(page.getByRole('textbox', { name: /코드 편집기/ })).toBeAttached({ timeout: 30_000 });
+/** Opens /ko (or /en) plus query and waits until the editor holds code. */
+export async function openPlayground(page: Page, query = '', locale: 'ko' | 'en' = 'ko') {
+  await page.goto(`/${locale}${query}`);
+  await expect(page.getByRole('textbox', { name: locale === 'ko' ? /코드 편집기/ : /Code editor/ })).toBeAttached({ timeout: 30_000 });
   await expect.poll(() => editorValue(page), { timeout: 30_000 }).not.toBe('');
 }
 
