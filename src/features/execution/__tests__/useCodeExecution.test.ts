@@ -207,3 +207,30 @@ describe('useCodeExecution live state', () => {
     expect(result.current.output?.status).toBe('succeeded');
   });
 });
+
+describe('useCodeExecution Stop', () => {
+  it('cancel() asks the server to stop the run, not only closes the stream', async () => {
+    const cancelRpc = vi.fn(() => ({ cancelled: true }));
+    const { wrapper } = rpcWrapper(({ service }) =>
+      service(ExecutionService, {
+        async *run(_req: unknown, ctx: { signal: AbortSignal }) {
+          yield { seq: 1n, event: { case: 'accepted', value: { executionId: 'exec_0123456789abcdefghijkl' } } };
+          await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve()));
+        },
+        cancel: cancelRpc,
+      } as never)
+    );
+    const { result } = renderHook(() => useCodeExecution(), { wrapper });
+    let done: Promise<void> = Promise.resolve();
+    act(() => {
+      done = result.current.execute('출력(1)', 'kingsejong', languages);
+    });
+    await waitFor(() => expect(result.current.streaming).toBe(true));
+    await act(async () => {
+      result.current.cancel();
+      await done;
+    });
+    expect(cancelRpc).toHaveBeenCalledWith(expect.objectContaining({ executionId: 'exec_0123456789abcdefghijkl' }), expect.anything());
+    expect(result.current.output?.status).toBe('cancelled');
+  });
+});
