@@ -57,8 +57,10 @@ const THEME_TO_PROTO: Record<ThemeSettings['theme'], Theme> = {
 };
 
 export function fromProtoSettings(s: Settings | undefined, colorScheme: string): { editor: EditorSettings; theme: ThemeSettings } {
-  if (!s) return { editor: DEFAULT_EDITOR_SETTINGS, theme: { ...DEFAULT_THEME_SETTINGS, color_scheme: colorScheme } };
-  const theme: ThemeSettings['theme'] = s.theme === Theme.LIGHT ? 'light' : s.theme === Theme.SYSTEM ? 'system' : 'dark';
+  // Until the first save the server returns zero values; font_size 0 is never a saved value (min 10).
+  if (!s || s.fontSize === 0) return { editor: DEFAULT_EDITOR_SETTINGS, theme: { ...DEFAULT_THEME_SETTINGS, color_scheme: colorScheme } };
+  const theme: ThemeSettings['theme'] =
+    s.theme === Theme.LIGHT ? 'light' : s.theme === Theme.DARK ? 'dark' : DEFAULT_THEME_SETTINGS.theme;
   return {
     editor: {
       font_size: s.fontSize || DEFAULT_EDITOR_SETTINGS.font_size,
