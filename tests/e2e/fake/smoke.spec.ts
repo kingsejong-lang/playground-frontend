@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Smoke test that needs no backend: NEXT_PUBLIC_API_URL points at a closed port,
- * so every RPC fails at the network level and the page must degrade gracefully.
+ * Smoke tests that need no backend. `?fake=unavailable` makes every RPC of the
+ * development fake transport fail like a refused connection, so the page must
+ * degrade gracefully; the headers come from src/proxy.ts.
  */
 test.describe('playground without backend', () => {
   test('renders /ko with a server-unavailable message and no app errors', async ({ page }) => {
@@ -15,12 +16,12 @@ test.describe('playground without backend', () => {
     });
     page.on('pageerror', (err) => appErrors.push(err.message));
 
-    const response = await page.goto('/ko');
+    const response = await page.goto('/ko?fake=unavailable');
     expect(response?.status()).toBe(200);
     const csp = response?.headers()['content-security-policy'] ?? '';
     expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
 
-    await expect(page.getByRole('button', { name: /^실행/ })).toBeVisible();
+    await expect(page.locator('header button[aria-keyshortcuts$="+Enter"]')).toBeVisible();
     await expect(page.getByText('플레이그라운드 서버에 연결할 수 없어요')).toBeVisible();
     expect(appErrors).toEqual([]);
   });

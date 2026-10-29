@@ -21,7 +21,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report tests/e2e/report",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
+    "test:e2e:stack": "playwright test -c playwright.stack.config.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "2.16.0",
