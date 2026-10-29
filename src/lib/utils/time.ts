@@ -20,15 +20,3 @@ export function formatRelativeTime(timestamp: string | Date, locale: string = 'e
   if (diff < TIME_MS.DAY) return rtf.format(-Math.floor(diff / TIME_MS.HOUR), 'hour');
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
-
-/**
- * Format duration in milliseconds to human readable string
- * @param ms - Duration in milliseconds
- * @returns Formatted duration string (e.g., "1.5s", "250ms")
- */
-export function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return `${Math.round(ms)}ms`;
-  }
-  return `${(ms / 1000).toFixed(1)}s`;
-}

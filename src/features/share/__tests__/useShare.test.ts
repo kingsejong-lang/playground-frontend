@@ -62,3 +62,47 @@ describe('useShare', () => {
     expect(result.current.error).toMatch(/invalid/i);
   });
 });
+
+describe('useShare failures', () => {
+  it('refuses empty code and unknown languages without a request', async () => {
+    const { result, createShare } = setup();
+    await act(() => result.current.createShare([{ name: 'main.ksj', content: '  \n' }], {}, 'kingsejong', languages));
+    expect(result.current.error).toBe('Please write some code first');
+    await act(() => result.current.createShare([{ name: 'main.ksj', content: 'x' }], {}, 'cobol', languages));
+    expect(result.current.error).toBe('Language not found');
+    expect(createShare).not.toHaveBeenCalled();
+  });
+
+  it('reports a share the server did not create', async () => {
+    const { result, createShare } = setup();
+    createShare.mockReturnValueOnce({ share: undefined, deleteToken: '' } as never);
+    await act(() => result.current.createShare([{ name: 'main.ksj', content: 'x' }], {}, 'kingsejong', languages));
+    expect(result.current.shareUrl).toBeNull();
+    expect(result.current.sharing).toBe(false);
+    expect(result.current.error).toEqual(expect.any(String));
+  });
+
+  it('still shows the link when the clipboard is blocked, and copies again on request', async () => {
+    const { result } = setup();
+    const writeText = vi.fn().mockRejectedValueOnce(new Error('denied')).mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    await act(() => result.current.createShare([{ name: 'main.ksj', content: 'x' }], {}, 'kingsejong', languages));
+    expect(result.current.shareUrl).toMatch(/share=AbCdEfGh1234/);
+    await act(() => result.current.copyToClipboard());
+    expect(writeText).toHaveBeenLastCalledWith(result.current.shareUrl);
+    writeText.mockRejectedValueOnce(new Error('denied'));
+    await act(() => result.current.copyToClipboard());
+    act(() => result.current.closeShareModal());
+    expect(result.current.shareUrl).toBeNull();
+    expect(result.current.shareId).toBeNull();
+  });
+
+  it('explains a share that cannot be loaded', async () => {
+    const { result, getShare } = setup();
+    getShare.mockReturnValueOnce({ share: undefined } as never);
+    const onLoad = vi.fn();
+    await act(() => result.current.loadShared('AbCdEfGh1234', onLoad));
+    expect(onLoad).not.toHaveBeenCalled();
+    expect(result.current.error).toBe('Could not load the shared code. Not found');
+  });
+});

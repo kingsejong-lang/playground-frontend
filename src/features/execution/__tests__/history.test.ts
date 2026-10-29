@@ -1,4 +1,14 @@
-import { addHistoryItem, getHistoryItems, importHistoryFromJson, parseHistoryItems, searchHistory } from '../history';
+import {
+  addHistoryItem,
+  clearHistory,
+  deleteHistoryItem,
+  exportHistoryToJson,
+  getHistoryItems,
+  getHistoryStats,
+  importHistoryFromJson,
+  parseHistoryItems,
+  searchHistory,
+} from '../history';
 import { emptyResult } from '@/lib/rpc';
 
 const KEY = 'playground_execution_history';
@@ -62,5 +72,32 @@ describe('history store', () => {
 
   it('rejects an import that is not an array', () => {
     expect(() => importHistoryFromJson('{"a":1}')).toThrow();
+  });
+
+  it('searches by language and output, exports and merges imports without duplicates', () => {
+    const first = addHistoryItem({ language: 'python', code: 'print(1)', output: { ...emptyResult(), chunks: [{ stream: 'stdout', text: 'hello\n' }] }, success: true });
+    expect(searchHistory('PYTHON')).toHaveLength(1);
+    expect(searchHistory('hello')).toHaveLength(1);
+    expect(searchHistory('nothing')).toHaveLength(0);
+    expect(searchHistory('  ')).toHaveLength(1);
+    const exported = exportHistoryToJson();
+    clearHistory();
+    importHistoryFromJson(exported);
+    importHistoryFromJson(exported);
+    expect(getHistoryItems().map((i) => i.id)).toEqual([first.id]);
+    expect(() => importHistoryFromJson('{"a":1}')).toThrow('not an array');
+  });
+
+  it('deletes items and reports stats', () => {
+    const a = addHistoryItem({ language: 'go', code: 'a', output: emptyResult(), success: true });
+    addHistoryItem({ language: 'go', code: 'b', output: emptyResult(), success: false });
+    expect(getHistoryStats()).toMatchObject({ total: 2, successful: 1, failed: 1, successRate: 50, byLanguage: { go: 2 } });
+    deleteHistoryItem(a.id);
+    expect(getHistoryItems()).toHaveLength(1);
+  });
+
+  it('keeps only the newest 100 runs', () => {
+    for (let i = 0; i < 105; i++) addHistoryItem({ language: 'go', code: String(i), output: emptyResult(), success: true });
+    expect(getHistoryItems()).toHaveLength(100);
   });
 });

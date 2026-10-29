@@ -134,3 +134,76 @@ describe('useCodeExecution', () => {
     expect(result.current.error).toMatch(/stdin/);
   });
 });
+
+describe('useCodeExecution without a language list', () => {
+  const finished = async function* () {
+    yield { seq: 1n, event: { case: 'finished', value: { status: ExecutionStatus.SUCCEEDED, exitCode: 0 } } };
+  };
+
+  it('still sends the run when the list never loaded, with a guessed file name', async () => {
+    const { result, runSpy } = setup(finished);
+    await act(() => result.current.execute('print(1)', 'python_3', []));
+    await act(() => result.current.execute('x', 'cobol', []));
+    const paths = runSpy.mock.calls.map((c) => (c[0] as { entryFile: string }).entryFile);
+    expect(paths).toEqual(['main.py', 'main.txt']);
+  });
+
+  it('runWorkspace uses the first file without a list and refuses unknown languages with one', async () => {
+    const { result, runSpy } = setup(finished);
+    await act(() => result.current.runWorkspace([{ name: 'a.go', content: 'package main' }, { name: 'b.go', content: '' }], {}, 'go', []));
+    expect((runSpy.mock.calls[0][0] as { entryFile: string }).entryFile).toBe('a.go');
+    await act(() => result.current.runWorkspace([{ name: 'a.go', content: 'x' }], {}, 'go', languages));
+    expect(result.current.error).toBe('Language not found');
+    await act(() => result.current.runWorkspace([{ name: 'main.ksj', content: '  ' }], {}, 'kingsejong', languages));
+    expect(result.current.error).toBe('Please write some code first');
+    expect(runSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useCodeExecution live state', () => {
+  it('reports streaming once accepted, and reset() discards the run', async () => {
+    const { result } = setup(async function* (_req, ctx) {
+      yield { seq: 1n, event: { case: 'accepted', value: { executionId: 'exec_0123456789abcdefghijkl' } } };
+      yield { seq: 2n, event: { case: 'output', value: { stream: 1, data: enc.encode('partial\n') } } };
+      await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve()));
+    });
+    let done: Promise<void> = Promise.resolve();
+    act(() => {
+      done = result.current.execute('출력(1)', 'kingsejong', languages);
+    });
+    await waitFor(() => expect(result.current.streaming).toBe(true));
+    expect(result.current.output?.chunks).toEqual([{ stream: 'stdout', text: 'partial\n' }]);
+    await act(async () => {
+      result.current.reset();
+      await done;
+    });
+    expect(result.current.output).toBeNull();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.streaming).toBe(false);
+  });
+
+  it('a new run replaces one still in flight', async () => {
+    let calls = 0;
+    const { result } = setup(async function* (_req, ctx) {
+      calls++;
+      if (calls === 1) {
+        yield { seq: 1n, event: { case: 'accepted', value: { executionId: 'exec_first_0123456789abcd' } } };
+        await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve()));
+        return;
+      }
+      yield { seq: 1n, event: { case: 'output', value: { stream: 1, data: enc.encode('second\n') } } };
+      yield { seq: 2n, event: { case: 'finished', value: { status: ExecutionStatus.SUCCEEDED, exitCode: 0 } } };
+    });
+    let first: Promise<void> = Promise.resolve();
+    act(() => {
+      first = result.current.execute('출력(1)', 'kingsejong', languages);
+    });
+    await waitFor(() => expect(result.current.loading).toBe(true));
+    await act(async () => {
+      await result.current.execute('출력(2)', 'kingsejong', languages);
+      await first;
+    });
+    expect(result.current.output?.chunks).toEqual([{ stream: 'stdout', text: 'second\n' }]);
+    expect(result.current.output?.status).toBe('succeeded');
+  });
+});
