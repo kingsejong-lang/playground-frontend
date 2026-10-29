@@ -43,7 +43,8 @@
     "tools": "Playground tools",
     "noLanguages": "Languages unavailable",
     "saveDraft": "Save draft",
-    "palette": "Command palette"
+    "palette": "Command palette",
+    "reference": "Reference"
   },
   "files": {
     "tabs": "Open files",
@@ -344,7 +345,8 @@
     "toggleTheme": "Switch light or dark theme",
     "toggleFileTree": "Show or hide the file list",
     "shortcuts": "Show keyboard shortcuts",
-    "clearOutput": "Clear output"
+    "clearOutput": "Clear output",
+    "toggleReference": "Show or hide the language reference"
   },
   "draft": {
     "saved": "Draft saved {time}",
@@ -358,5 +360,31 @@
     "hint": "Sent from the start on every run.",
     "tooLarge": "Input is over 64 KB and cannot be sent.",
     "lines": "{count, plural, one {# line} other {# lines}}"
+  },
+  "reference": {
+    "title": "Language reference",
+    "open": "Show or hide the language reference",
+    "search": "Search the reference",
+    "searchPlaceholder": "Keyword, function or English name",
+    "count": "{count, plural, one {# entry} other {# entries}}",
+    "noMatches": "Nothing matches \"{query}\". Try another word or an English name such as for or print.",
+    "clearSearch": "Clear search",
+    "insert": "Insert",
+    "insertLabel": "Insert the {title} example into the editor",
+    "inserted": "Example inserted",
+    "otherLanguage": "Examples are KingSejong code. Switch the language to KingSejong to insert them.",
+    "switchLanguage": "Switch to KingSejong",
+    "source": "Based on the KingSejong language docs (v0.6)",
+    "categories": {
+      "basics": "Basics",
+      "operators": "Operators",
+      "control": "Conditions and loops",
+      "functions": "Functions",
+      "arrays": "Arrays",
+      "josa": "Particles",
+      "errors": "Errors and async",
+      "builtins": "Built-in functions",
+      "modules": "Modules and standard library"
+    }
   }
 }

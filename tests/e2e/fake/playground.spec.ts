@@ -119,3 +119,13 @@ test('sign in and sign out', async ({ page }) => {
   await headerButton(page, /sejong/).click();
   await expect(headerButton(page, '로그인')).toBeVisible();
 });
+
+test('opening the file list for the first time keeps the editor', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openPlayground(page);
+  await setEditor(page, '출력("그대로")');
+  await page.getByRole('button', { name: '파일 목록 열기/닫기' }).first().click();
+  await expect(page.getByRole('complementary', { name: '파일' })).toBeVisible();
+  await expect(page.getByText('문제가 생겼어요')).toHaveCount(0);
+  expect(await editorValue(page)).toBe('출력("그대로")');
+});

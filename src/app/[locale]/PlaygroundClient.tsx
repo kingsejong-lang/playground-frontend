@@ -14,7 +14,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 // Components
 import OutputPanel from '@/features/execution/OutputPanel';
 import FileTabs from '@/features/editor/FileTabs';
-import { EditorSkeleton, type EditorCommand, type RevealRequest } from '@/features/editor/CodeEditor';
+import { EditorSkeleton, type EditorCommand, type InsertRequest, type RevealRequest } from '@/features/editor/CodeEditor';
 import { resolveEntryFile } from '@/features/editor/entry';
 import { loadDraft, saveDraft } from '@/features/editor/drafts';
 import { useDraft } from '@/features/editor/useDraft';
@@ -29,7 +29,10 @@ const CodeEditor = dynamicImport(() => import('@/features/editor/CodeEditor'), {
   loading: () => <EditorSkeleton />,
   ssr: false,
 });
-const FileTree = dynamicImport(() => import('@/features/editor/FileTree'));
+// Lazily loaded panels need `loading`: without it the first open suspends the whole page,
+// which tears down the Monaco editor and crashes when it is recreated.
+const FileTree = dynamicImport(() => import('@/features/editor/FileTree'), { loading: () => null });
+const ReferencePanel = dynamicImport(() => import('@/features/reference/ReferencePanel'), { loading: () => null });
 
 // Hooks & Context
 import { useAuth } from '@/features/auth/AuthContext';
@@ -125,6 +128,8 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const [showSnippetLibrary, setShowSnippetLibrary] = useState(false);
   const [reveal, setReveal] = useState<RevealRequest | null>(null);
+  const [showReference, setShowReference] = useState(false);
+  const [insertRequest, setInsertRequest] = useState<InsertRequest | null>(null);
   const [stdin, setStdin] = useState('');
   const [showStdin, setShowStdin] = useState(false);
   /** File that produced the current output; its diagnostics are drawn in the editor. */
@@ -254,6 +259,15 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
     [replaceCode, setSelectedLanguage, t]
   );
 
+  /** Inserts a reference example at the editor cursor (undo with the editor's undo). */
+  const handleInsertExample = useCallback(
+    (code: string) => {
+      setInsertRequest({ text: code, nonce: Date.now() });
+      toast.success(t('reference.inserted'));
+    },
+    [toast, t]
+  );
+
   const handleAddFile = useCallback(() => {
     const fileNumber = files.length + 1;
     const newFileName = `file${fileNumber}.ksj`;
@@ -357,6 +371,7 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
       { id: 'share', label: t('commands.share'), run: handleShare },
       { id: 'settings', label: t('commands.settings'), run: () => setShowSettings(true) },
       { id: 'toggleFileTree', label: t('commands.toggleFileTree'), run: () => setShowFileTree((prev) => !prev) },
+      { id: 'toggleReference', label: t('commands.toggleReference'), run: () => setShowReference((prev) => !prev) },
       { id: 'toggleLayout', label: t('commands.toggleLayout'), run: toggleOrientation },
       { id: 'toggleTheme', label: t('commands.toggleTheme'), run: toggleTheme },
       { id: 'clearOutput', label: t('commands.clearOutput'), run: resetExecution },
@@ -378,6 +393,7 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
       ? 'code-sanctuary-dark'
       : 'code-sanctuary-light';
   const direction = narrow ? 'vertical' : orientation;
+  const kingsejongId = languages.find((l) => l.id.startsWith('kingsejong'))?.id;
   // Every file was sent, so a diagnostic belongs to the file its path names (no path: the entry file).
   const runDiagnostics = output?.diagnostics.filter((d) => (d.path ? workspacePath(d.path) === activeFile?.name : runFileId === activeFileId));
 
@@ -407,6 +423,8 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
         onOpenSnippets={() => setShowSnippetLibrary(true)}
         onOpenHistory={() => setShowHistory(true)}
         onToggleFileTree={() => setShowFileTree((prev) => !prev)}
+        onToggleReference={() => setShowReference((prev) => !prev)}
+        referenceOpen={showReference}
         onFormat={handleFormatCode}
         onSaveDraft={() => void saveDraftNow()}
         onOpenShortcuts={() => setShowShortcutsHelp(true)}
@@ -467,6 +485,7 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
                   ariaLabel={`${t('editor.label')}: ${activeFile?.name ?? ''}`}
                   diagnostics={runDiagnostics}
                   reveal={reveal}
+                  insert={insertRequest}
                 />
               </div>
               {(!currentLanguage || currentLanguage.capabilities.includes(Language_Capability.STDIN)) && (
@@ -497,6 +516,16 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
             />
           </Panel>
         </PanelGroup>
+
+        {showReference && (
+          <ReferencePanel
+            isOpen={showReference}
+            onClose={() => setShowReference(false)}
+            onInsert={handleInsertExample}
+            canInsert={selectedLanguage.startsWith('kingsejong')}
+            onSwitchLanguage={kingsejongId ? () => handleLanguageChange(kingsejongId) : undefined}
+          />
+        )}
       </main>
 
       <PlaygroundModals

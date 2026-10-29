@@ -43,7 +43,8 @@
     "tools": "플레이그라운드 도구",
     "noLanguages": "언어 목록 없음",
     "saveDraft": "임시 저장",
-    "palette": "명령 팔레트"
+    "palette": "명령 팔레트",
+    "reference": "문법 참고"
   },
   "files": {
     "tabs": "열린 파일",
@@ -344,7 +345,8 @@
     "toggleTheme": "밝은/어두운 테마 바꾸기",
     "toggleFileTree": "파일 목록 열기/닫기",
     "shortcuts": "단축키 보기",
-    "clearOutput": "출력 지우기"
+    "clearOutput": "출력 지우기",
+    "toggleReference": "문법 참고 열기/닫기"
   },
   "draft": {
     "saved": "임시 저장됨 {time}",
@@ -358,5 +360,31 @@
     "hint": "실행할 때마다 이 내용이 처음부터 프로그램에 전달돼요.",
     "tooLarge": "입력이 64KB를 넘어서 보낼 수 없어요.",
     "lines": "{count}줄"
+  },
+  "reference": {
+    "title": "문법 참고",
+    "open": "문법 참고 열기/닫기",
+    "search": "문법 검색",
+    "searchPlaceholder": "키워드, 함수, 영어 이름으로 찾기",
+    "count": "{count, plural, other {#개 항목}}",
+    "noMatches": "\"{query}\"에 맞는 항목이 없어요. 다른 낱말이나 영어 이름(예: for, print)으로 찾아보세요.",
+    "clearSearch": "검색어 지우기",
+    "insert": "넣기",
+    "insertLabel": "{title} 예제를 편집기에 넣기",
+    "inserted": "예제를 넣었어요",
+    "otherLanguage": "예제는 킹세종 코드예요. 편집기에 넣으려면 언어를 킹세종으로 바꾸세요.",
+    "switchLanguage": "킹세종으로 바꾸기",
+    "source": "킹세종 언어 문서(v0.6) 기준",
+    "categories": {
+      "basics": "기본",
+      "operators": "연산자",
+      "control": "조건과 반복",
+      "functions": "함수",
+      "arrays": "배열",
+      "josa": "조사 표현",
+      "errors": "오류와 비동기",
+      "builtins": "내장 함수",
+      "modules": "모듈과 표준 라이브러리"
+    }
   }
 }

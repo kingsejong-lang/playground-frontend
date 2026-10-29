@@ -14,6 +14,7 @@ import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BookMarked,
+  BookOpenText,
   FolderTree,
   History,
   Keyboard,
@@ -30,6 +31,7 @@ import {
   Square,
   Sun,
   WandSparkles,
+  Check,
   FileText,
 } from 'lucide-react';
 import LanguageSelector from '@/features/editor/LanguageSelector';
@@ -57,6 +59,8 @@ interface PlaygroundHeaderProps {
   onOpenSnippets: () => void;
   onOpenHistory: () => void;
   onToggleFileTree: () => void;
+  onToggleReference: () => void;
+  referenceOpen: boolean;
   onFormat: () => void;
   onSaveDraft: () => void;
   onOpenShortcuts: () => void;
@@ -88,6 +92,8 @@ export function PlaygroundHeader({
   onOpenSnippets,
   onOpenHistory,
   onToggleFileTree,
+  onToggleReference,
+  referenceOpen,
   onFormat,
   onSaveDraft,
   onOpenShortcuts,
@@ -141,6 +147,7 @@ export function PlaygroundHeader({
       <nav className="flex items-center gap-1 max-lg:hidden" aria-label={t('header.tools')}>
         <HeaderAction icon={<FileText />} label={t('header.templates')} onClick={onOpenTemplates} />
         <HeaderAction icon={<History />} label={t('header.history')} onClick={onOpenHistory} />
+        <HeaderAction icon={<BookOpenText />} label={t('header.reference')} onClick={onToggleReference} aria-pressed={referenceOpen} />
         <HeaderAction
           icon={<Share2 />}
           label={sharing ? t('header.sharing') : t('header.share')}
@@ -186,6 +193,7 @@ export function PlaygroundHeader({
           <MenuDivider />
         </div>
         <MenuItem icon={<Save />} label={t('header.saveDraft')} hint={[runKeys[0], 'S']} onClick={fromMenu(onSaveDraft)} />
+        <MenuItem icon={<BookOpenText />} label={t('reference.title')} onClick={fromMenu(onToggleReference)} pressed={referenceOpen} />
         <MenuItem icon={<BookMarked />} label={t('snippets.title')} onClick={fromMenu(onOpenSnippets)} />
         <MenuItem icon={<FolderTree />} label={t('files.toggleTree')} onClick={fromMenu(onToggleFileTree)} />
         <MenuItem icon={<WandSparkles />} label={t('commands.format')} onClick={fromMenu(onFormat)} />
@@ -258,18 +266,22 @@ function MenuItem({
   hint,
   onClick,
   disabled,
+  pressed,
 }: {
   icon: React.ReactNode;
   label: string;
   hint?: string[];
   onClick: () => void;
   disabled?: boolean;
+  /** For toggles: shows a check and sets aria-pressed. */
+  pressed?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={pressed}
       className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg disabled:opacity-50"
     >
       <span className="inline-flex size-4 shrink-0 items-center justify-center text-fg-muted [&>svg]:size-4" aria-hidden="true">
@@ -277,6 +289,7 @@ function MenuItem({
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {hint && <KeyCombo keys={hint} className="shrink-0 max-sm:hidden" />}
+      {pressed && <Check className="size-4 shrink-0 text-accent-text" aria-hidden="true" />}
     </button>
   );
 }
