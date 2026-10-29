@@ -3,7 +3,7 @@
  * playground-backend). Run with `npm run test:e2e:stack`; see tests/e2e/README.md.
  * Every test here is tagged @stack.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import { addFile, editorValue, headerButton, openPlayground, output, runAndWait, runButton, setEditor, setEntry, stopButton, tab } from '../helpers';
 
 test.describe('real stack', { tag: '@stack' }, () => {
@@ -168,14 +168,37 @@ test.describe('real stack', { tag: '@stack' }, () => {
   });
 });
 
+const finishedRuns = (page: Page) => page.locator('main').getAttribute('data-finished-runs').then(Number);
+
 test.describe('backend down', { tag: '@stack' }, () => {
-  test('shows the unavailable state and keeps the editor usable', async ({ page }) => {
-    // Simulate the gateway disappearing by failing every request to it.
-    await page.route('http://localhost:8080/**', (route) => route.abort('connectionrefused'));
-    await page.goto('/ko');
-    await expect(page.getByText('플레이그라운드 서버에 연결할 수 없어요')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('button', { name: '다시 연결' })).toBeVisible();
-    await expect.poll(() => editorValue(page), { timeout: 30_000 }).toContain('출력(');
+  /**
+   * The page's first load is rendered on the server (language list and starter
+   * code), so blocking the gateway in the browser before navigating no longer
+   * reaches the browser's first RPC. What a visitor meets instead is the gateway
+   * going away mid-session: the next browser request fails. The first-load
+   * unavailable banner is covered by the fake-backend suite (?fake=unavailable).
+   */
+  test('a run while the gateway is unreachable explains it, and Try again recovers', async ({ page }) => {
+    await openPlayground(page);
+    await setEditor(page, '출력("다시 연결됨")\n');
+
+    const blockGateway = (route: Route) => route.abort('connectionrefused');
+    await page.route('http://localhost:8080/**', blockGateway);
+    await runAndWait(page);
+    const retry = output(page).getByRole('button', { name: '다시 시도' });
+    // The text is also announced through a live region, hence first().
+    await expect(output(page).getByText('플레이그라운드 서버에 연결할 수 없어요').first()).toBeVisible();
+    await expect(retry).toBeVisible();
+    // The work is not lost and can still be edited.
+    expect(await editorValue(page)).toBe('출력("다시 연결됨")\n');
+
+    await page.unroute('http://localhost:8080/**', blockGateway);
+    const before = await finishedRuns(page);
+    await retry.click();
+    await expect.poll(() => finishedRuns(page), { timeout: 30_000 }).toBeGreaterThan(before);
+    await expect(output(page)).toContainText('실행 완료');
+    await expect(output(page)).toContainText('다시 연결됨');
+    await expect(retry).toHaveCount(0);
   });
 });
 
