@@ -253,7 +253,8 @@
     "confirmTitle": "Clear all history?",
     "confirmBody": "This permanently deletes {count, plural, one {# run} other {# runs}}. It cannot be undone.",
     "succeeded": "Succeeded",
-    "notSucceeded": "Failed"
+    "notSucceeded": "Failed",
+    "otherFiles": "{entry} + {count, plural, one {# more file} other {# more files}}"
   },
   "settings": {
     "title": "Settings",

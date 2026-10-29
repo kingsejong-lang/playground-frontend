@@ -13,10 +13,21 @@ import type { ExecutionResult } from '@/lib/rpc';
 /**
  * History item interface
  */
+/** One file of a recorded run. */
+export interface HistoryFile {
+  name: string;
+  content: string;
+}
+
 export interface HistoryItem {
   id: string;
   timestamp: string;
   language: string;
+  /** Every file that was sent with the run (one file for entries recorded before multi-file history). */
+  files: HistoryFile[];
+  /** The file the run started from; always one of `files`. */
+  entryFile: string;
+  /** Content of the entry file (used for the preview and search). */
   code: string;
   args?: string;
   stdin?: string;
@@ -106,19 +117,31 @@ export function fromLegacyOutput(legacy: z.infer<typeof LegacyOutputSchema>): Ex
   };
 }
 
-const HistoryItemSchema = z.object({
-  id: z.string(),
-  timestamp: z.string(),
-  language: z.string(),
-  code: z.string(),
-  args: z.string().optional(),
-  stdin: z.string().optional(),
-  output: z.union([
-    ExecutionResultSchema,
-    LegacyOutputSchema.transform(fromLegacyOutput),
-  ]),
-  success: z.boolean(),
-});
+/** File name for entries recorded before history kept files: main + the language's extension. */
+const LEGACY_EXTENSIONS: Record<string, string> = { kingsejong: '.ksj', python: '.py', go: '.go' };
+export function legacyFileName(language: string): string {
+  return `main${LEGACY_EXTENSIONS[language.split('_')[0]] ?? '.txt'}`;
+}
+
+const HistoryItemSchema = z
+  .object({
+    id: z.string(),
+    timestamp: z.string(),
+    language: z.string(),
+    code: z.string(),
+    files: z.array(z.object({ name: z.string().min(1).max(128), content: z.string() })).min(1).max(64).optional(),
+    entryFile: z.string().optional(),
+    args: z.string().optional(),
+    stdin: z.string().optional(),
+    output: z.union([ExecutionResultSchema, LegacyOutputSchema.transform(fromLegacyOutput)]),
+    success: z.boolean(),
+  })
+  .transform((item) => {
+    // Older entries stored only the entry file's code: migrate them to one file.
+    const files = item.files ?? [{ name: legacyFileName(item.language), content: item.code }];
+    const entryFile = item.entryFile && files.some((f) => f.name === item.entryFile) ? item.entryFile : files[0].name;
+    return { ...item, files, entryFile };
+  });
 
 /** Parses untrusted JSON data into history items, dropping invalid entries. */
 export function parseHistoryItems(data: unknown): HistoryItem[] {
@@ -183,13 +206,25 @@ export function getHistoryItems(): HistoryItem[] {
   }
 }
 
+/** A run to record. Without `files`, `code` is stored as the language's single main file. */
+export type NewHistoryItem = Omit<HistoryItem, 'id' | 'timestamp' | 'files' | 'entryFile'> & {
+  files?: HistoryFile[];
+  entryFile?: string;
+};
+
 /**
  * Add a history item
  */
-export function addHistoryItem(item: Omit<HistoryItem, 'id' | 'timestamp'>): HistoryItem {
+export function addHistoryItem(item: NewHistoryItem): HistoryItem {
   try {
+    const files = item.files?.length
+      ? item.files.map(({ name, content }) => ({ name, content }))
+      : [{ name: legacyFileName(item.language), content: item.code }];
+    const entryFile = item.entryFile && files.some((f) => f.name === item.entryFile) ? item.entryFile : files[0].name;
     const newItem: HistoryItem = {
       ...item,
+      files,
+      entryFile,
       id: generateHistoryId(),
       timestamp: new Date().toISOString(),
     };
@@ -202,9 +237,19 @@ export function addHistoryItem(item: Omit<HistoryItem, 'id' | 'timestamp'>): His
     // Limit to MAX_HISTORY_ITEMS
     const limitedItems = items.slice(0, MAX_HISTORY_ITEMS);
 
-    // Save to localStorage
+    // Save to localStorage. Runs keep every file, so when storage is full the
+    // oldest entries are dropped until the list fits (the new run is always kept).
     if (typeof window !== 'undefined') {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(limitedItems));
+      let kept = limitedItems;
+      for (;;) {
+        try {
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(kept));
+          break;
+        } catch (error) {
+          if (kept.length <= 1) throw error;
+          kept = kept.slice(0, Math.max(1, Math.floor(kept.length / 2)));
+        }
+      }
       historyStore.notify();
     }
 
@@ -261,8 +306,8 @@ export function searchHistory(query: string): HistoryItem[] {
   const lowerQuery = query.toLowerCase();
 
   return items.filter(item => {
-    // Search in code
-    if (item.code.toLowerCase().includes(lowerQuery)) {
+    // Search in every file (name and content)
+    if (item.files.some((f) => f.name.toLowerCase().includes(lowerQuery) || f.content.toLowerCase().includes(lowerQuery))) {
       return true;
     }
 

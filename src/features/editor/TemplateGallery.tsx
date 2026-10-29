@@ -7,13 +7,13 @@ import type { Template } from '@kingsejong-lang/playground-proto';
 import { useRpc } from '@/lib/rpc';
 import { useFailureText } from '@/hooks/useFailureText';
 import { Dialog } from '@/components/ui/Dialog';
-import { firstFileContent } from './templates';
 
 interface TemplateGalleryProps {
   isOpen: boolean;
   onClose: () => void;
   selectedLanguage: string;
-  onSelectTemplate: (code: string) => void;
+  /** The chosen template's files (paths as names) and its entry file. */
+  onSelectTemplate: (template: { files: { name: string; content: string }[]; entryFile: string }) => void;
 }
 
 export function TemplateGallery({ isOpen, onClose, selectedLanguage, onSelectTemplate }: TemplateGalleryProps) {
@@ -61,7 +61,10 @@ export function TemplateGallery({ isOpen, onClose, selectedLanguage, onSelectTem
         languageId: template.languageId || selectedLanguage,
         templateId: template.id,
       });
-      onSelectTemplate(firstFileContent(res.template?.files?.files ?? [], res.template?.entryFile));
+      const files = (res.template?.files?.files ?? []).map((f) => ({ name: f.path, content: f.content }));
+      // The entry file named by the template, or (as before) the first file.
+      const entryFile = files.find((f) => f.name === res.template?.entryFile)?.name ?? files[0]?.name ?? '';
+      onSelectTemplate({ files, entryFile });
       close();
     } catch (err) {
       setSelectError(`${tErr('loadTemplate')} ${failureText(err)}`);

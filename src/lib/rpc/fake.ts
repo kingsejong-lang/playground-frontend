@@ -139,7 +139,8 @@ const LANGUAGES: LanguageInit[] = [
   },
 ];
 
-const TEMPLATE_CODE: Record<string, Record<string, { title: string; description: string; code: string }>> = {
+/** `code` is the entry file; `extraFiles` makes a multi-file template. */
+const TEMPLATE_CODE: Record<string, Record<string, { title: string; description: string; code: string; extraFiles?: { path: string; content: string }[] }>> = {
   kingsejong: {
     hello_world: {
       title: '안녕, 세상',
@@ -150,6 +151,12 @@ const TEMPLATE_CODE: Record<string, Record<string, { title: string; description:
       title: '반복문',
       description: '1부터 5까지 세며 구구단 한 줄을 출력합니다',
       code: '정수 i\ni가 1부터 5까지 {\n    출력("2 x", i, "=", 2 * i)\n}\n',
+    },
+    modules: {
+      title: '파일 나누기',
+      description: '다른 파일에 둔 함수를 가져와서 씁니다 (파일 2개)',
+      code: '가져오기 "도구"\n출력(두배(21))\n',
+      extraFiles: [{ path: '도구.ksj', content: '두배 = 함수(x) {\n    반환 x * 2\n}\n' }],
     },
     functions: {
       title: '함수',
@@ -405,7 +412,7 @@ export function createFakeTransport(): Transport {
         if (!t) throw detailError(Code.NotFound, ErrorDetail_Reason.NOT_FOUND);
         const lang = LANGUAGES.find((l) => l.id === req.languageId);
         const path = lang?.defaultEntryFile ?? 'main.txt';
-        return { template: { id: req.templateId, languageId: req.languageId, title: t.title, description: t.description, entryFile: path, files: { files: [{ path, content: t.code }] } } };
+        return { template: { id: req.templateId, languageId: req.languageId, title: t.title, description: t.description, entryFile: path, files: { files: [...(t.extraFiles ?? []), { path, content: t.code }] } } };
       },
       async formatCode(req) {
         await sleep(200);

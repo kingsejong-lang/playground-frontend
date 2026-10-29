@@ -195,10 +195,19 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
       const runFile = files.find((f) => f.name === (preferred ?? entryName));
       setRunFileId(runFile?.id ?? null);
       const language = selectedLanguage;
-      void runWorkspace(workspace, { preferred }, language, languages, stdin).then((result) => {
-        // Every finished run goes to history; cancelled runs and refused requests do not.
+      const sent = workspace;
+      void runWorkspace(sent, { preferred }, language, languages, stdin).then((result) => {
+        // Every finished run goes to history with all its files and its entry file;
+        // cancelled runs and refused requests do not.
         if (result && result.status !== 'cancelled' && result.status !== 'pending') {
-          addHistoryItem({ language, code: runFile?.content ?? '', output: result, success: result.success });
+          addHistoryItem({
+            language,
+            files: sent,
+            entryFile: runFile?.name ?? sent[0]?.name ?? '',
+            code: runFile?.content ?? '',
+            output: result,
+            success: result.success,
+          });
         }
       });
     },
@@ -252,15 +261,56 @@ function PlaygroundContent({ initialLanguages }: { initialLanguages: InitialLang
     [activeFile, updateFileContent, toast, t]
   );
 
-  const handleSelectTemplate = useCallback((code: string) => replaceCode(code, t('templates.loaded')), [replaceCode, t]);
-  const handleSelectSnippet = useCallback((code: string) => replaceCode(code, t('snippets.loaded')), [replaceCode, t]);
-
-  const handleLoadHistory = useCallback(
-    (item: HistoryItem) => {
-      replaceCode(item.code, t('history.loaded'));
-      setSelectedLanguage(item.language);
+  /**
+   * Replaces every open file (and the entry file, and optionally the language) and
+   * offers to undo it, restoring the previous files, entry, active file and language.
+   */
+  const replaceWorkspace = useCallback(
+    (next: { files: { name: string; content: string }[]; entryFile: string; language?: string }, message: string) => {
+      const previous = { files: workspace, entry: entryFile?.name, active: activeFile?.name, language: selectedLanguage };
+      replaceFiles(next.files, { entry: next.entryFile, active: next.entryFile });
+      if (next.language && next.language !== selectedLanguage) setSelectedLanguage(next.language);
+      const hadWork = previous.files.some((f) => f.content.trim() !== '');
+      toast.success(
+        message,
+        hadWork
+          ? {
+              action: {
+                label: t('common.undo'),
+                onClick: () => {
+                  replaceFiles(previous.files, { entry: previous.entry, active: previous.active });
+                  setSelectedLanguage(previous.language);
+                },
+              },
+            }
+          : undefined
+      );
     },
-    [replaceCode, setSelectedLanguage, t]
+    [workspace, entryFile, activeFile, selectedLanguage, replaceFiles, setSelectedLanguage, toast, t]
+  );
+
+  /** A one-file template replaces the active file; a multi-file template replaces the workspace. */
+  const handleSelectTemplate = useCallback(
+    (template: { files: { name: string; content: string }[]; entryFile: string }) => {
+      if (template.files.length > 1) replaceWorkspace(template, t('templates.loaded'));
+      else replaceCode(template.files[0]?.content ?? '', t('templates.loaded'));
+    },
+    [replaceWorkspace, replaceCode, t]
+  );
+
+  /** Snippets are fragments: they go in at the cursor (undo with the editor's undo). */
+  const handleSelectSnippet = useCallback(
+    (code: string) => {
+      setInsertRequest({ text: code, nonce: Date.now() });
+      toast.success(t('snippets.loaded'));
+    },
+    [toast, t]
+  );
+
+  /** Restores every file of a recorded run, its entry file and its language. */
+  const handleLoadHistory = useCallback(
+    (item: HistoryItem) => replaceWorkspace({ files: item.files, entryFile: item.entryFile, language: item.language }, t('history.loaded')),
+    [replaceWorkspace, t]
   );
 
   /** Inserts a reference example at the editor cursor (undo with the editor's undo). */

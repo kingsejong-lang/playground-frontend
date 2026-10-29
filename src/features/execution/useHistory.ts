@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import { useLocalStore } from '@/lib/local-store';
 import {
   HistoryItem,
+  type NewHistoryItem,
   addHistoryItem,
   deleteHistoryItem,
   clearHistory,
@@ -26,7 +27,7 @@ export interface UseHistoryReturn {
   selectedStatus: 'all' | 'success' | 'failed';
 
   // Actions
-  addItem: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => HistoryItem;
+  addItem: (item: NewHistoryItem) => HistoryItem;
   deleteItem: (id: string) => void;
   clearAll: () => void;
   setSearchQuery: (query: string) => void;
@@ -50,7 +51,7 @@ export function useHistory(): UseHistoryReturn {
   const refresh = useCallback(() => historyStore.notify(), []);
 
   // Add new history item
-  const addItem = useCallback((item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
+  const addItem = useCallback((item: NewHistoryItem) => {
     return addHistoryItem(item);
   }, []);
 

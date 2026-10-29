@@ -104,3 +104,25 @@ describe('HistorySidebar', () => {
     expect(toast.error).toHaveBeenCalledWith('Could not import that file');
   });
 });
+
+describe('HistorySidebar multi-file runs', () => {
+  it('names the entry file and how many other files the run had, and restores the whole run', () => {
+    localStorage.clear();
+    addHistoryItem({
+      language: 'kingsejong',
+      files: [
+        { name: 'main.ksj', content: '가져오기 "util"' },
+        { name: 'util.ksj', content: 'x = 1' },
+        { name: 'b.ksj', content: 'y = 2' },
+      ],
+      entryFile: 'main.ksj',
+      code: '가져오기 "util"',
+      success: true,
+      output: { ...emptyResult(), status: 'succeeded', success: true },
+    });
+    const { onLoadHistory } = open();
+    expect(screen.getByText('main.ksj + 2 more files')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /main\.ksj \+ 2 more files/, hidden: true }));
+    expect(onLoadHistory).toHaveBeenCalledWith(expect.objectContaining({ entryFile: 'main.ksj', files: expect.arrayContaining([expect.objectContaining({ name: 'b.ksj' })]) }));
+  });
+});
