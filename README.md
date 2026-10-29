@@ -86,7 +86,9 @@ Accepted → Queued → Started → Output/Diagnostic → Finished 를 실제와
 | `timeout` / `memory` / `output_limit` | 시간/메모리/출력 제한 초과 (출력 제한은 `Truncated` 포함) |
 | `queued` | 대기열 3 → 2 → 1 후 실행 |
 | `slow` | 끝나지 않는 실행 (중지 버튼 확인용) |
-| `drop` | Accepted 뒤 연결이 끊김 → `GetExecution` 재연결 |
+| `drop` | 첫 출력 뒤 연결이 끊김 → `ResumeRun` 으로 다시 연결해 놓친 출력을 모두 받음 ("다시 연결됨") |
+| `drop_gap` | 위와 같지만 서버 버퍼에서 이미 지워진 이벤트가 있음 → `ReplayGap` 안내 |
+| `drop_noreplay` / `drop_legacy` | `ResumeRun` 이 `REPLAY_UNAVAILABLE` / `Unimplemented` → `GetExecution` 으로 최종 상태만 받음 |
 | `internal` | `INTERNAL_ERROR` |
 | `overloaded` / `rate_limited` | `ResourceExhausted` + `ErrorDetail` (재시도 시간 포함) |
 | `unavailable` | 모든 RPC 가 네트워크 오류 (백엔드 꺼짐 상태) |

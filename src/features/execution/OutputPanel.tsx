@@ -424,6 +424,11 @@ export default function OutputPanel({
               </Notice>
             ))}
             {output.gaps > 0 && <Notice>{t('gaps', { count: output.gaps })}</Notice>}
+            {output.replayGap ? (
+              <Notice>{t('replayGap', { count: output.replayGap })}</Notice>
+            ) : (
+              output.resumed && <Notice>{t('resumed')}</Notice>
+            )}
             {output.reconnected && <Notice>{t('reconnected')}</Notice>}
           </div>
         )}

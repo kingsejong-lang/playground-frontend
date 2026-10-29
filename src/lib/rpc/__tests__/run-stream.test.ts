@@ -1,6 +1,8 @@
 import { create, toBinary } from '@bufbuild/protobuf';
 import { Code, ConnectError, createClient, createRouterTransport } from '@connectrpc/connect';
 import {
+  ErrorDetailSchema,
+  ErrorDetail_Reason,
   ExecutionService,
   ExecutionStatus,
   RunEventSchema,
@@ -178,6 +180,140 @@ describe('runSession', () => {
       ac.abort();
     };
     const result = await runSession({ client, request, signal: ac.signal, sleep });
+    expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ executionId: 'exec_0123456789abcdefghijkl' }), expect.anything());
+    expect(result.status).toBe('cancelled');
+  });
+});
+
+describe('runSession output replay (ResumeRun)', () => {
+  const dropped = new ConnectError('Failed to fetch', Code.Unavailable);
+  const replayUnavailable = () =>
+    new ConnectError('gone', Code.FailedPrecondition, undefined, [{ desc: ErrorDetailSchema, value: { reason: ErrorDetail_Reason.REPLAY_UNAVAILABLE } }]);
+
+  it('resumes after the last received seq, drops duplicates and reports the reconnect', async () => {
+    const resumeRun = vi.fn(async function* (req: { afterSeq: bigint }) {
+      expect(req.afterSeq).toBe(2n);
+      // The server may resend the last event it is unsure about; it must not be shown twice.
+      yield out(2, 'one\n');
+      yield out(3, 'two\n');
+      yield finished(4);
+    });
+    const updates: ExecutionResult[] = [];
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run() {
+          yield accepted();
+          yield out(2, 'one\n');
+          throw dropped;
+        },
+        resumeRun,
+        getExecution: () => {
+          throw new Error('not expected');
+        },
+      } as never)
+    );
+    const result = await runSession({ client, request, signal: new AbortController().signal, sleep: noSleep, onUpdate: (r) => updates.push(r) });
+    expect(resumeRun).toHaveBeenCalledTimes(1);
+    expect(result.chunks).toEqual([{ stream: 'stdout', text: 'one\ntwo\n' }]);
+    expect(result).toMatchObject({ status: 'succeeded', resumed: true, reconnected: false, gaps: 0 });
+    expect(result.replayGap).toBeUndefined();
+    // The reconnect note shows while the resumed run is still streaming, not only at the end.
+    const firstResumed = updates.find((u) => u.resumed)!;
+    expect(firstResumed.status).not.toBe('succeeded');
+    expect(firstResumed.chunks[0].text).toBe('one\ntwo\n');
+  });
+
+  it('reports events the server evicted (ReplayGap) without counting them as transit gaps', async () => {
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run() {
+          yield accepted();
+          yield out(2, 'a');
+          throw dropped;
+        },
+        async *resumeRun() {
+          yield create(RunEventSchema, { event: { case: 'replayGap', value: { firstAvailableSeq: 6n } } });
+          yield out(6, 'f');
+          yield finished(7);
+        },
+      } as never)
+    );
+    const result = await runSession({ client, request, signal: new AbortController().signal, sleep: noSleep });
+    expect(result).toMatchObject({ status: 'succeeded', resumed: true, replayGap: 3, gaps: 0 });
+    expect(result.chunks[0].text).toBe('af');
+  });
+
+  it('resumes again when the resumed stream drops too', async () => {
+    const afterSeqs: bigint[] = [];
+    let calls = 0;
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run() {
+          yield accepted();
+          throw dropped;
+        },
+        async *resumeRun(req: { afterSeq: bigint }) {
+          afterSeqs.push(req.afterSeq);
+          calls++;
+          if (calls === 1) {
+            yield out(2, 'x');
+            throw dropped;
+          }
+          if (calls === 2) throw dropped; // still unreachable
+          yield out(3, 'y');
+          yield finished(4);
+        },
+      } as never)
+    );
+    const result = await runSession({ client, request, signal: new AbortController().signal, sleep: noSleep });
+    expect(afterSeqs).toEqual([1n, 2n, 2n]);
+    expect(result).toMatchObject({ status: 'succeeded', resumed: true });
+    expect(result.chunks[0].text).toBe('xy');
+  });
+
+  it.each([
+    ['REPLAY_UNAVAILABLE', replayUnavailable],
+    ['Unimplemented', () => new ConnectError('no such method', Code.Unimplemented)],
+  ])('falls back to GetExecution on %s', async (_name, error) => {
+    const resumeRun = vi.fn(async function* () {
+      throw error();
+    });
+    const getExecution = vi.fn().mockResolvedValue({ executionId: 'x', status: ExecutionStatus.SUCCEEDED, exitCode: 0 });
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run() {
+          yield accepted();
+          yield out(2, 'partial');
+          throw dropped;
+        },
+        resumeRun,
+        getExecution,
+      } as never)
+    );
+    const result = await runSession({ client, request, signal: new AbortController().signal, sleep: noSleep });
+    expect(resumeRun).toHaveBeenCalledTimes(1); // never retried once the server said it cannot replay
+    expect(getExecution).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ status: 'succeeded', reconnected: true });
+    expect(result.resumed).toBeUndefined();
+  });
+
+  it('cancels the run when the user stops while reconnecting', async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn().mockResolvedValue({ cancelled: true });
+    const client = clientWith(({ service }) =>
+      service(ExecutionService, {
+        async *run() {
+          yield accepted();
+          throw dropped;
+        },
+        async *resumeRun() {
+          controller.abort();
+          throw new ConnectError('aborted', Code.Canceled);
+        },
+        cancel,
+      } as never)
+    );
+    const result = await runSession({ client, request, signal: controller.signal, sleep: noSleep });
     expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ executionId: 'exec_0123456789abcdefghijkl' }), expect.anything());
     expect(result.status).toBe('cancelled');
   });

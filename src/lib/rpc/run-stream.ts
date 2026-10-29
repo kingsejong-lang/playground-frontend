@@ -5,8 +5,11 @@
  *   per-stream incremental UTF-8 decoding, seq gap detection, diagnostics,
  *   truncation, metrics.
  * - runSession drives one run: opens the stream with an AbortSignal, and if
- *   the stream drops after Accepted it reconnects by polling GetExecution
- *   (output is not replayed by contract). Aborting while polling calls Cancel.
+ *   the stream drops after Accepted it reattaches with ResumeRun(after_seq =
+ *   last received seq), which replays the missed events (de-duplicated by seq)
+ *   and continues live. When the server cannot replay (REPLAY_UNAVAILABLE) or
+ *   does not implement ResumeRun yet, it falls back to polling GetExecution
+ *   for the final status. Aborting while reconnecting calls Cancel.
  *
  * Usage:
  *   const ac = new AbortController();
@@ -27,6 +30,8 @@ import {
   type RunEvent,
   type RunRequestSchema,
 } from '@kingsejong-lang/playground-proto';
+import { Code } from '@connectrpc/connect';
+import { ErrorDetail_Reason } from '@kingsejong-lang/playground-proto';
 import { isAbort, toRpcFailure } from './errors';
 
 export type StreamName = 'stdout' | 'stderr';
@@ -84,6 +89,10 @@ export interface ExecutionResult {
   gaps: number;
   /** True when the final status came from GetExecution after a dropped stream. */
   reconnected: boolean;
+  /** True when a dropped stream was resumed with ResumeRun (output replayed). */
+  resumed?: boolean;
+  /** Events the server had already evicted when the stream was resumed (ReplayGap). */
+  replayGap?: number;
   phase?: 'compile' | 'run';
   queuePosition?: number;
 }
@@ -169,6 +178,17 @@ export class RunAccumulator {
 
   /** Applies one event. Returns false when the event was a duplicate/out-of-order and ignored. */
   apply(ev: RunEvent): boolean {
+    if (ev.event.case === 'replayGap') {
+      // First event of a resumed stream when the server already evicted events:
+      // everything before first_available_seq is gone for good. Count it once
+      // here (not as a transit gap) and continue from there.
+      const first = ev.event.value.firstAvailableSeq;
+      if (first > this.lastSeq + 1n) {
+        this.result = { ...this.result, replayGap: (this.result.replayGap ?? 0) + Number(first - this.lastSeq - 1n) };
+        this.lastSeq = first - 1n;
+      }
+      return true;
+    }
     if (ev.seq > 0n) {
       if (ev.seq <= this.lastSeq) return false;
       if (this.lastSeq > 0n && ev.seq > this.lastSeq + 1n) {
@@ -228,6 +248,16 @@ export class RunAccumulator {
         break;
     }
     return true;
+  }
+
+  /** Last seq applied; ResumeRun asks for the events after it. */
+  get lastSeqSeen(): bigint {
+    return this.lastSeq;
+  }
+
+  /** Marks the run as resumed after a dropped stream. */
+  markResumed(): void {
+    this.result = { ...this.result, resumed: true };
   }
 
   /** Applies the final state fetched with GetExecution after a dropped stream. */
@@ -347,8 +377,10 @@ export async function runSession(opts: RunSessionOptions): Promise<ExecutionResu
     return acc.snapshot();
   }
 
-  // Dropped after Accepted (or closed without Finished): poll GetExecution.
+  // Dropped after Accepted (or closed without Finished): resume the stream, or
+  // poll GetExecution when the server cannot replay.
   const executionId = acc.executionId;
+  let replay = true;
   for (const delay of delays) {
     await sleep(delay, signal);
     if (signal.aborted) {
@@ -361,6 +393,28 @@ export async function runSession(opts: RunSessionOptions): Promise<ExecutionResu
       acc.end('cancelled', 'Cancelled', true);
       emit();
       return acc.snapshot();
+    }
+    if (replay) {
+      let resumedNow = false;
+      try {
+        for await (const ev of client.resumeRun({ executionId, afterSeq: acc.lastSeqSeen }, { signal, timeoutMs: 0 })) {
+          if (!resumedNow) {
+            resumedNow = true;
+            acc.markResumed();
+          }
+          if (acc.apply(ev)) emit();
+          if (acc.isFinished) return acc.snapshot();
+        }
+      } catch (err) {
+        if (signal.aborted || isAbort(err)) continue; // the next iteration cancels the run
+        const failure = toRpcFailure(err);
+        if (failure.reason === ErrorDetail_Reason.REPLAY_UNAVAILABLE || failure.code === Code.Unimplemented) {
+          replay = false; // fall through to GetExecution in this attempt
+        } else {
+          continue; // dropped again or not reachable yet: retry after the next delay
+        }
+      }
+      if (replay) continue; // stream ended without Finished: resume again
     }
     try {
       const r = await client.getExecution({ executionId });

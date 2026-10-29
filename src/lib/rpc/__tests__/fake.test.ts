@@ -178,3 +178,37 @@ describe('fake transport failure modes', () => {
     expect((await settle(exec.getExecution({ executionId: 'x' }))).executionId).toBe('x');
   });
 });
+
+describe('fake transport dropped streams and replay', () => {
+  afterEach(() => setMode(''));
+
+  async function dropRun(mode: string) {
+    setMode(mode);
+    const client = createClient(ExecutionService, createFakeTransport());
+    return runSession({
+      client,
+      request: { languageId: 'kingsejong', entryFile: 'main.ksj', files: { files: [{ path: 'main.ksj', content: '출력("하나")\n출력("둘")' }] } },
+      signal: new AbortController().signal,
+      reconnectDelaysMs: [50, 50, 50],
+    });
+  }
+
+  it('drop: resumes and replays every missed line', async () => {
+    const result = await dropRun('drop');
+    expect(result).toMatchObject({ status: 'succeeded', resumed: true, gaps: 0 });
+    expect(result.replayGap).toBeUndefined();
+    expect(result.chunks.map((c) => c.text).join('')).toBe('첫 줄은 도착했습니다\n하나\n둘\n');
+  });
+
+  it('drop_gap: reports the events the server no longer had', async () => {
+    const result = await dropRun('drop_gap');
+    expect(result).toMatchObject({ status: 'succeeded', resumed: true, replayGap: 2 });
+    expect(result.chunks.map((c) => c.text).join('')).toBe('첫 줄은 도착했습니다\n');
+  });
+
+  it.each(['drop_noreplay', 'drop_legacy'])('%s: falls back to the final status from GetExecution', async (mode) => {
+    const result = await dropRun(mode);
+    expect(result).toMatchObject({ status: 'succeeded', reconnected: true });
+    expect(result.resumed).toBeUndefined();
+  });
+});

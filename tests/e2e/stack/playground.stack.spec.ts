@@ -179,3 +179,41 @@ test.describe('backend down', { tag: '@stack' }, () => {
   });
 });
 
+
+/**
+ * Output replay after a dropped Run stream. Skipped until the backend implements
+ * ExecutionService.ResumeRun; enable with E2E_RESUME_RUN=1.
+ *
+ * The Run response is fetched in full and handed to the page cut after the
+ * first output event, so the client sees the stream end without Finished and
+ * must resume with ResumeRun(after_seq) to get the rest.
+ */
+test.describe('real stack: output replay', { tag: '@stack' }, () => {
+  test.skip(!process.env.E2E_RESUME_RUN, 'Backend does not implement ResumeRun yet (set E2E_RESUME_RUN=1 to run)');
+
+  test('a dropped stream is resumed and every line arrives once', async ({ page }) => {
+    await page.route('**/playground.api.v1.ExecutionService/Run', async (route) => {
+      const response = await route.fetch();
+      const body = await response.body();
+      // Connect streaming envelopes: 1 flag byte, 4-byte big-endian length, message.
+      // Keep the envelopes up to and including the first one with program output
+      // (recognised by the printed text), so Finished and later output are missing.
+      let offset = 0;
+      while (offset + 5 <= body.length) {
+        const end = offset + 5 + body.readUInt32BE(offset + 1);
+        const hasOutput = body.subarray(offset + 5, end).includes(Buffer.from('줄'));
+        offset = end;
+        if (hasOutput) break;
+      }
+      await route.fulfill({ response, body: body.subarray(0, offset) });
+    });
+
+    await openPlayground(page);
+    await setEditor(page, 'i가 1부터 6까지 {\n    출력("줄", i)\n}\n');
+    await runAndWait(page);
+    await expect(output(page)).toContainText('실행 완료');
+    await expect(output(page).getByRole('note')).toHaveText('다시 연결됨 · 끊긴 사이의 출력도 이어서 받았어요.');
+    const text = await output(page).innerText();
+    for (let i = 1; i <= 6; i++) expect(text.split(`줄 ${i}`).length - 1).toBe(1);
+  });
+});

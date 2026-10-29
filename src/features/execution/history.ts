@@ -57,6 +57,8 @@ const ExecutionResultSchema = z.object({
   message: z.string().optional(),
   gaps: z.number().default(0),
   reconnected: z.boolean().default(false),
+  resumed: z.boolean().optional(),
+  replayGap: z.number().optional(),
   phase: z.enum(['compile', 'run']).optional(),
   queuePosition: z.number().optional(),
 });
