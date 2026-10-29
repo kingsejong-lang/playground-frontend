@@ -108,6 +108,12 @@ const SANCTUARY_DARK: MonacoEditor.IStandaloneThemeData = {
     { token: 'function', foreground: 'e4e4e7' },
     { token: 'operator', foreground: 'b4b7cf' },
     { token: 'string.invalid', foreground: 'ff6b6b' },
+    // KingSejong: particles and range markers are grammar, set lighter than statement keywords.
+    { token: 'keyword.josa', foreground: '8f9cf7', fontStyle: '' },
+    { token: 'keyword.range', foreground: '8f9cf7', fontStyle: '' },
+    { token: 'constant', foreground: 'e9b949' },
+    { token: 'string.escape', foreground: 'e9b949' },
+    { token: 'predefined', foreground: 'e4e4e7' },
   ],
   colors: {
     'editor.background': '#12121a',
@@ -148,6 +154,11 @@ const SANCTUARY_LIGHT: MonacoEditor.IStandaloneThemeData = {
     { token: 'function', foreground: '15161c' },
     { token: 'operator', foreground: '3f4253' },
     { token: 'string.invalid', foreground: 'c22b2b' },
+    { token: 'keyword.josa', foreground: '3b4ac0', fontStyle: '' },
+    { token: 'keyword.range', foreground: '3b4ac0', fontStyle: '' },
+    { token: 'constant', foreground: 'a15c00' },
+    { token: 'string.escape', foreground: 'a15c00' },
+    { token: 'predefined', foreground: '15161c' },
   ],
   colors: {
     'editor.background': '#fbfbfc',

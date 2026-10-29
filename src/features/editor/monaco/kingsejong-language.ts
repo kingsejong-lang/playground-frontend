@@ -1,23 +1,83 @@
 /**
- * Kingsejong language definition for Monaco Editor
- * Provides syntax highlighting, autocomplete, and language features
+ * KingSejong language support for Monaco: tokens, brackets, indentation,
+ * completion, hover and formatting.
  *
- * Note: This file should be imported dynamically (client-side only)
- * to avoid SSR issues with Monaco Editor.
+ * The token rules follow the language's own lexer (kingsejong-lang v0.6,
+ * src/lexer/Token.cpp and Lexer.cpp), not a generic C-like grammar:
+ * - Comments: `#` to end of line (the documented form), and `//` and
+ *   `/* *\/`, which the lexer also accepts.
+ * - Strings: "..." or '...', with escapes \n \t \r \\ \" \' (any other
+ *   escaped character stands for itself). There are no raw or template strings.
+ * - Numbers: decimal integers and decimals with digits on both sides of the
+ *   point (`3.14`). No exponent, hex or digit separators.
+ * - Identifiers: ASCII letters, `_` and every character of three-byte UTF-8,
+ *   which includes Hangul, then also digits.
+ * - Keywords: the table in Token.cpp. Particles (조사) are tokens too. The
+ *   lexer splits a particle off the end of a word only when another word, a
+ *   number or a string follows. Range markers (부터, 까지, 미만, ...) are
+ *   always split off.
+ *
+ * Load on the client only (Monaco does not run on the server).
  */
 
 import type * as monacoEditor from 'monaco-editor';
+import { REFERENCE } from '@/features/reference/entries';
 
 export const kingsejongLanguageId = 'kingsejong';
 
 type Monaco = typeof monacoEditor;
 
+/** Statement and declaration keywords (Token.cpp), without particles and range markers. */
+export const KEYWORDS = [
+  '만약', '아니면', '반복', '반복한다', '동안', '각각',
+  '함수', '반환', '가져오기',
+  '그리고', '또는', '하고', '하라', 'when',
+  '시도', '오류', '마지막', '던지다',
+  '클래스', '생성자', '공개', '비공개', '자신', '상속', '상위',
+  '비동기', '대기',
+];
+
+/** Type keywords (Token.cpp). 정수, 실수 and 문자열 also work as conversion functions. */
+export const TYPE_KEYWORDS = ['정수', '실수', '문자', '문자열', '논리', '배열'];
+
+/** 참 and 거짓 are keywords; 없음 is the null value (the evaluator resolves it unless shadowed). */
+export const CONSTANTS = ['참', '거짓', '없음'];
+
+/** Particle tokens (Token.cpp). Longer forms first so 으로/에서 win over 로/에. */
+export const PARTICLES = ['으로', '에서', '을', '를', '이', '가', '은', '는', '의', '로', '에'];
+
+/** Range and count markers, always split off the preceding word by the lexer. */
+export const RANGE_MARKERS = ['부터', '까지', '미만', '초과', '이하', '이상', '씩', '번'];
+
 /**
- * Kingsejong language configuration
+ * Built-in functions registered by the evaluator (src/evaluator/Builtin.cpp) and
+ * the particle-based array methods. Highlighted, but plain identifiers to the lexer.
+ */
+export const BUILTINS = [
+  '출력', '입력', '타입', '길이', '부분문자열', '포함', '추가',
+  '딕셔너리_키들', '딕셔너리_값들', '딕셔너리_포함', '분리', '찾기', '바꾸기', '대문자', '소문자',
+  '반올림', '올림', '내림', '절대값', '제곱근', '제곱',
+  'JSON_파싱', 'JSON_문자열화', '현재_시간', '현재_날짜', '현재_시각', '현재_날짜시간', '시간_포맷', '타임스탬프', '슬립',
+  '정규표현식_일치', '정규표현식_검색', '정규표현식_모두_찾기', '정규표현식_치환', '정규표현식_분리', '정규표현식_추출', '정규표현식_개수',
+  '이메일_검증', 'URL_검증', '전화번호_검증', 'Base64_인코딩', 'Base64_디코딩', 'URL_인코딩',
+  '문자열_해시', '해시_비교', '체크섬', 'XOR_암호화', 'XOR_복호화', '시저_암호화', '시저_복호화', '랜덤_문자열', '랜덤_숫자',
+  'assert', 'assert_같음', 'assert_다름', 'assert_참', 'assert_거짓',
+  // Array methods used with particles: 숫자들을 걸러낸다(...)
+  '걸러낸다', '변환한다', '바꾼다', '축약한다', '찾다', '정렬한다', '역순으로_나열한다',
+];
+
+const ID_START = 'A-Za-z_\\u0800-\\uffff';
+const ID_PART = 'A-Za-z0-9_\\u0800-\\uffff';
+const alternatives = (words: readonly string[]) => words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+/** A whole word that is a keyword of any kind (the lexer never splits those). */
+const KEYWORD_WORD = `(?:${alternatives([...KEYWORDS, ...TYPE_KEYWORDS, ...RANGE_MARKERS, '참', '거짓'])})(?![${ID_PART}])`;
+
+/**
+ * Language configuration: comment toggling, brackets, auto-closing, indentation.
  */
 export const kingsejongLanguageConfig: monacoEditor.languages.LanguageConfiguration = {
   comments: {
-    lineComment: '//',
+    lineComment: '#',
     blockComment: ['/*', '*/'],
   },
   brackets: [
@@ -29,8 +89,9 @@ export const kingsejongLanguageConfig: monacoEditor.languages.LanguageConfigurat
     { open: '{', close: '}' },
     { open: '[', close: ']' },
     { open: '(', close: ')' },
-    { open: '"', close: '"' },
-    { open: "'", close: "'" },
+    { open: '"', close: '"', notIn: ['string', 'comment'] },
+    { open: "'", close: "'", notIn: ['string', 'comment'] },
+    { open: '/*', close: ' */', notIn: ['string'] },
   ],
   surroundingPairs: [
     { open: '{', close: '}' },
@@ -39,171 +100,145 @@ export const kingsejongLanguageConfig: monacoEditor.languages.LanguageConfigurat
     { open: '"', close: '"' },
     { open: "'", close: "'" },
   ],
+  // Words for double-click selection and word-based features include Hangul.
+  wordPattern: new RegExp(`-?\\d+(?:\\.\\d+)?|[${ID_START}][${ID_PART}]*`),
+  indentationRules: {
+    // A line that opens a block, array or call without closing it (ignoring a trailing comment).
+    increaseIndentPattern: /^.*(?:\{|\[|\()\s*(?:#.*)?$/,
+    // A line that starts by closing one.
+    decreaseIndentPattern: /^\s*[}\])]/,
+  },
   folding: {
     markers: {
-      start: new RegExp('^\\s*//\\s*#region\\b'),
-      end: new RegExp('^\\s*//\\s*#endregion\\b'),
+      start: /^\s*#\s*region\b/,
+      end: /^\s*#\s*endregion\b/,
     },
   },
 };
 
 /**
- * Kingsejong language tokens and syntax highlighting
+ * Monarch tokenizer. Token names map onto the editor themes' rules
+ * (keyword, type, string, number, comment, operator, ...).
  */
 export const kingsejongLanguageTokensProvider: monacoEditor.languages.IMonarchLanguage = {
   defaultToken: '',
-  tokenPostfix: '.ks',
+  tokenPostfix: '.ksj',
+  unicode: true,
 
-  keywords: [
-    // Core keywords (Korean)
-    '함수', 'function', 'func',
-    '변수', 'var', 'let', 'const',
-    '만약', 'if',
-    '아니면', 'else',
-    '동안', 'while',
-    '반복', 'for',
-    '순회', // for iteration
-    '반환', 'return',
-    '참', 'true',
-    '거짓', 'false',
-    '없음', 'null', 'nil',
-    '출력', 'print',
-    '입력', 'input',
+  keywords: KEYWORDS,
+  typeKeywords: TYPE_KEYWORDS,
+  constants: CONSTANTS,
+  particles: PARTICLES,
+  rangeMarkers: RANGE_MARKERS,
+  builtins: BUILTINS,
 
-    // Type-related
-    '타입', 'type',
-    '구조체', 'struct',
-    '인터페이스', 'interface',
-    '패키지', 'package',
-    '가져오기', 'import',
-    '내보내기', 'export',
-    '클래스', 'class',
-
-    // Control flow
-    '계속', 'continue',
-    '중단', 'break',
-    '시도', 'try',
-    '잡기', 'catch',
-    '마침내', 'finally',
-    '던지기', 'throw',
-
-    // Object-oriented
-    '새', 'new',
-    '이것', 'this',
-    '부모', 'super',
-
-    // Logical operators (Korean)
-    '그리고', 'and',
-    '또는', 'or',
-    '아님', 'not',
-
-    // Special
-    '시작', // entry point function name
-  ],
-
-  typeKeywords: [
-    '정수', 'int', 'integer',
-    '실수', 'float', 'double',
-    '문자열', 'string', 'str',
-    '불린', 'boolean', 'bool',
-    '배열', 'array', 'list',
-    '맵', 'map', 'dict', 'dictionary',
-    '세트', 'set',
-    '객체', 'object',
-  ],
-
-  operators: [
-    '=', '>', '<', '!', '~', '?', ':',
-    '==', '<=', '>=', '!=',
-    '&&', '||', '++', '--',
-    '+', '-', '*', '/', '&', '|', '^', '%',
-    '<<', '>>', '>>>', '+=', '-=', '*=', '/=',
-    '&=', '|=', '^=', '%=', '<<=', '>>=', '>>>=',
-  ],
-
-  symbols: /[=><!~?:&|+\-*\/\^%]+/,
-  escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
-  digits: /\d+(_+\d+)*/,
-  octaldigits: /[0-7]+(_+[0-7]+)*/,
-  binarydigits: /[0-1]+(_+[0-1]+)*/,
-  hexdigits: /[[0-9a-fA-F]+(_+[0-9a-fA-F]+)*/,
+  escapes: /\\./,
 
   tokenizer: {
     root: [
-      // Identifiers and keywords
-      [/[a-zA-Z_가-힣]\w*/, {
-        cases: {
-          '@keywords': 'keyword',
-          '@typeKeywords': 'type',
-          '@default': 'identifier',
-        },
-      }],
-
-      // Whitespace
-      { include: '@whitespace' },
-
-      // Delimiters and operators
-      [/[{}()\[\]]/, '@brackets'],
-      [/[<>](?!@symbols)/, '@brackets'],
-      [/@symbols/, {
-        cases: {
-          '@operators': 'operator',
-          '@default': '',
-        },
-      }],
-
-      // Numbers
-      [/(@digits)[eE]([\-+]?(@digits))?/, 'number.float'],
-      [/(@digits)\.(@digits)([eE][\-+]?(@digits))?/, 'number.float'],
-      [/0[xX](@hexdigits)/, 'number.hex'],
-      [/0[oO]?(@octaldigits)/, 'number.octal'],
-      [/0[bB](@binarydigits)/, 'number.binary'],
-      [/@digits/, 'number'],
-
-      // Delimiter: after number because of .\d floats
-      [/[;,.]/, 'delimiter'],
-
-      // Strings
-      [/"([^"\\]|\\.)*$/, 'string.invalid'],  // non-terminated string
-      [/'([^'\\]|\\.)*$/, 'string.invalid'],  // non-terminated string
-      [/"/, 'string', '@string_double'],
-      [/'/, 'string', '@string_single'],
-    ],
-
-    whitespace: [
-      [/[ \t\r\n]+/, ''],
-      [/\/\*/, 'comment', '@comment'],
-      [/\/\/.*$/, 'comment'],
-      // Line comments in the starter programs and templates: "# ..."
+      // Comments
       [/#.*$/, 'comment'],
+      [/\/\/.*$/, 'comment'],
+      [/\/\*/, 'comment', '@blockComment'],
+
+      // Strings: the lexer reads up to the matching quote, across line breaks.
+      [/"/, 'string.quote', '@stringDouble'],
+      [/'/, 'string.quote', '@stringSingle'],
+
+      // Numbers, followed directly by a range marker in "1부터 10까지", "3번".
+      [/\d+\.\d+/, 'number.float'],
+      [/\d+/, 'number'],
+
+      // A word ending in a range marker: "시작부터", "끝까지", "횟수번".
+      [
+        new RegExp(`([${ID_START}][${ID_PART}]*?)(${alternatives(RANGE_MARKERS)})(?![${ID_PART}])`),
+        [
+          { cases: { '@keywords': 'keyword', '@typeKeywords': 'type', '@constants': 'constant', '@builtins': 'predefined', '@default': 'identifier' } },
+          'keyword.range',
+        ],
+      ],
+
+      // A word ending in a particle, split off when a word (not a keyword), a number
+      // or a string follows on the same line: "숫자들을 정렬한다", "i가 1부터".
+      [
+        new RegExp(
+          `([${ID_START}][${ID_PART}]*?)(${alternatives(PARTICLES)})(?=[ \\t]+(?:\\d|"|'|-\\d|(?!${KEYWORD_WORD})[${ID_START}]))`
+        ),
+        [
+          { cases: { '@keywords': 'keyword', '@typeKeywords': 'type', '@constants': 'constant', '@builtins': 'predefined', '@default': 'identifier' } },
+          'keyword.josa',
+        ],
+      ],
+
+      // Whole words
+      [
+        new RegExp(`[${ID_START}][${ID_PART}]*`),
+        {
+          cases: {
+            '@keywords': 'keyword',
+            '@rangeMarkers': 'keyword.range',
+            '@particles': 'keyword.josa',
+            '@typeKeywords': 'type',
+            '@constants': 'constant',
+            '@builtins': 'predefined',
+            '@default': 'identifier',
+          },
+        },
+      ],
+
+      // Brackets, operators and delimiters
+      [/[{}()[\]]/, '@brackets'],
+      [/->|==|!=|<=|>=|&&|\|\||[=+\-*/%<>!]/, 'operator'],
+      [/[;,.:]/, 'delimiter'],
+      [/[ \t\r\n]+/, ''],
     ],
 
-    comment: [
-      [/[^\/*]+/, 'comment'],
+    blockComment: [
+      [/[^*]+/, 'comment'],
       [/\*\//, 'comment', '@pop'],
-      [/[\/*]/, 'comment'],
+      [/\*/, 'comment'],
     ],
 
-    string_double: [
+    stringDouble: [
       [/[^\\"]+/, 'string'],
       [/@escapes/, 'string.escape'],
-      [/\\./, 'string.escape.invalid'],
-      [/"/, 'string', '@pop'],
+      [/"/, 'string.quote', '@pop'],
     ],
 
-    string_single: [
+    stringSingle: [
       [/[^\\']+/, 'string'],
       [/@escapes/, 'string.escape'],
-      [/\\./, 'string.escape.invalid'],
-      [/'/, 'string', '@pop'],
+      [/'/, 'string.quote', '@pop'],
     ],
   },
 };
 
+interface Snippet {
+  label: string;
+  insertText: string;
+  detail: string;
+  documentation: string;
+}
+
+/** Snippets in the language's real syntax (see the reference panel for the same forms). */
+export const SNIPPETS: readonly Snippet[] = [
+  { label: '만약', insertText: '만약 (${1:조건}) {\n\t$0\n}', detail: '조건문', documentation: '조건이 참일 때만 실행해요.' },
+  { label: '만약-아니면', insertText: '만약 (${1:조건}) {\n\t$2\n} 아니면 {\n\t$0\n}', detail: '조건문 (아니면)', documentation: '조건이 거짓일 때 실행할 블록도 함께 써요.' },
+  { label: '반복', insertText: '반복 (${1:조건}) {\n\t$0\n}', detail: '조건 반복', documentation: '조건이 참인 동안 되풀이해요. 동안 (조건) 도 같은 뜻이에요.' },
+  { label: '번 반복한다', insertText: '${1:3}번 반복한다 {\n\t$0\n}', detail: 'N번 반복', documentation: '정해진 횟수만큼 되풀이해요.' },
+  { label: '부터-까지', insertText: '${1:i}가 ${2:1}부터 ${3:10}까지 {\n\t$0\n}', detail: '범위 반복', documentation: '까지·이하는 끝을 포함하고, 미만은 빼요.' },
+  { label: '함수', insertText: '${1:이름} = 함수(${2:매개변수}) {\n\t반환 $0\n}', detail: '함수 정의', documentation: '함수는 값이라 변수에 담아요.' },
+  { label: '비동기 함수', insertText: '${1:이름} = 비동기 함수(${2:매개변수}) {\n\t반환 $0\n}', detail: '비동기 함수', documentation: '프로미스를 돌려줘요. 대기 로 결과를 꺼내요.' },
+  { label: '시도-오류', insertText: '시도 {\n\t$1\n} 오류 (${2:e}) {\n\t$0\n}', detail: '오류 잡기', documentation: '시도 안에서 난 오류를 오류 블록에서 받아요.' },
+  { label: '클래스', insertText: '클래스 ${1:이름} {\n\t생성자(${2:매개변수}) {\n\t\t$0\n\t}\n}', detail: '클래스 정의', documentation: '생성자로 필드를 초기화해요.' },
+  { label: '가져오기', insertText: '가져오기 "${1:stdlib/math}"', detail: '모듈 가져오기', documentation: '표준 라이브러리 모듈이나 다른 파일을 불러와요.' },
+];
+
 /**
- * Autocomplete provider for Kingsejong
+ * Autocomplete: snippets, keywords and built-in functions.
  */
 export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor.languages.CompletionItemProvider {
+  const { CompletionItemKind, CompletionItemInsertTextRule } = monaco.languages;
   return {
     provideCompletionItems: (model, position) => {
       const word = model.getWordUntilPosition(position);
@@ -213,467 +248,95 @@ export function createKingsejongCompletionProvider(monaco: Monaco): monacoEditor
         startColumn: word.startColumn,
         endColumn: word.endColumn,
       };
-
       const suggestions: monacoEditor.languages.CompletionItem[] = [
-        // Korean keywords with snippets
-        {
-          label: '함수',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '함수 ${1:이름}(${2:매개변수}) {\n\t${0:// 코드}\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '함수를 정의합니다',
-          detail: '함수 정의',
+        ...SNIPPETS.map((s) => ({
+          label: s.label,
+          kind: CompletionItemKind.Snippet,
+          insertText: s.insertText,
+          insertTextRules: CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: s.detail,
+          documentation: s.documentation,
           range,
-        },
-        {
-          label: '만약',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '만약 ${1:조건} {\n\t$0\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '조건문을 실행합니다',
-          detail: 'if 문',
+        })),
+        // A keyword with a snippet of the same name is offered once, as the snippet.
+        ...[...KEYWORDS, ...TYPE_KEYWORDS, ...CONSTANTS].filter((k) => !SNIPPETS.some((s) => s.label === k)).map((k) => ({
+          label: k,
+          kind: CompletionItemKind.Keyword,
+          insertText: k,
           range,
-        },
-        {
-          label: '만약-아니면',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '만약 ${1:조건} {\n\t${2:// 참일 때}\n} 아니면 {\n\t${0:// 거짓일 때}\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '조건에 따라 다른 코드를 실행합니다',
-          detail: 'if-else 문',
+        })),
+        ...BUILTINS.map((b) => ({
+          label: b,
+          kind: CompletionItemKind.Function,
+          insertText: b,
           range,
-        },
-        {
-          label: '반복',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '반복 ${1:변수} in ${2:범위} {\n\t$0\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '반복문을 실행합니다',
-          detail: 'for 반복문',
-          range,
-        },
-        {
-          label: '동안',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '동안 ${1:조건} {\n\t$0\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '조건이 참인 동안 반복합니다',
-          detail: 'while 반복문',
-          range,
-        },
-        {
-          label: '출력',
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: '출력(${1:값})',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '값을 출력합니다',
-          detail: '출력 함수',
-          range,
-        },
-        {
-          label: '변수',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '변수 ${1:이름} = ${2:값}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '변수를 선언합니다',
-          detail: '변수 선언',
-          range,
-        },
-        {
-          label: '반환',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: '반환 ${1:값}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '함수에서 값을 반환합니다',
-          detail: 'return',
-          range,
-        },
-
-        // Special snippets
-        {
-          label: '시작함수',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '함수 시작() {\n\t${0:출력("안녕, 세상!")}\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '프로그램 진입점 함수를 생성합니다',
-          detail: 'main 함수 템플릿',
-          range,
-        },
-        {
-          label: '헬로월드',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '함수 시작() {\n\t출력("안녕, 세상!")\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Hello World 프로그램을 생성합니다',
-          detail: 'Hello World',
-          range,
-        },
-
-        // English equivalents
-        {
-          label: 'function',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'function ${1:name}(${2:params}) {\n\t${0:// code}\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Define a function',
-          detail: 'function definition',
-          range,
-        },
-        {
-          label: 'if',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'if ${1:condition} {\n\t$0\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'If statement',
-          detail: 'if statement',
-          range,
-        },
-        {
-          label: 'ifelse',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'if ${1:condition} {\n\t${2:// true}\n} else {\n\t${0:// false}\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'If-else statement',
-          detail: 'if-else statement',
-          range,
-        },
-        {
-          label: 'for',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'for ${1:variable} in ${2:range} {\n\t$0\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'For loop',
-          detail: 'for loop',
-          range,
-        },
-        {
-          label: 'while',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'while ${1:condition} {\n\t$0\n}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'While loop',
-          detail: 'while loop',
-          range,
-        },
-        {
-          label: 'print',
-          kind: monaco.languages.CompletionItemKind.Function,
-          insertText: 'print(${1:value})',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Print output',
-          detail: 'print function',
-          range,
-        },
-        {
-          label: 'var',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'var ${1:name} = ${2:value}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Declare a variable',
-          detail: 'variable declaration',
-          range,
-        },
-        {
-          label: 'return',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'return ${1:value}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Return value',
-          detail: 'return statement',
-          range,
-        },
-
-        // Logical operators
-        {
-          label: '그리고',
-          kind: monaco.languages.CompletionItemKind.Operator,
-          insertText: '그리고',
-          documentation: '논리 AND 연산자',
-          detail: 'and',
-          range,
-        },
-        {
-          label: '또는',
-          kind: monaco.languages.CompletionItemKind.Operator,
-          insertText: '또는',
-          documentation: '논리 OR 연산자',
-          detail: 'or',
-          range,
-        },
-        {
-          label: '아님',
-          kind: monaco.languages.CompletionItemKind.Operator,
-          insertText: '아님',
-          documentation: '논리 NOT 연산자',
-          detail: 'not',
-          range,
-        },
-
-        // Advanced snippets - Class
-        {
-          label: '클래스',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '클래스 ${1:이름} {',
-            '\t변수 ${2:속성}',
-            '',
-            '\t함수 생성자(${3:매개변수}) {',
-            '\t\t이것.${2:속성} = ${3:매개변수}',
-            '\t}',
-            '',
-            '\t함수 ${4:메서드}() {',
-            '\t\t${0:// 코드}',
-            '\t}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '클래스를 정의합니다',
-          detail: 'class template',
-          range,
-        },
-        {
-          label: 'class',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            'class ${1:Name} {',
-            '\tvar ${2:property}',
-            '',
-            '\tfunction constructor(${3:params}) {',
-            '\t\tthis.${2:property} = ${3:params}',
-            '\t}',
-            '',
-            '\tfunction ${4:method}() {',
-            '\t\t${0:// code}',
-            '\t}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Define a class',
-          detail: 'class template',
-          range,
-        },
-
-        // Advanced snippets - Module
-        {
-          label: '모듈',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '패키지 ${1:이름}',
-            '',
-            '가져오기 ${2:의존성}',
-            '',
-            '함수 ${3:공개함수}() {',
-            '\t${0:// 공개 API}',
-            '}',
-            '',
-            '내보내기 { ${3:공개함수} }',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '모듈 구조를 생성합니다',
-          detail: 'module template',
-          range,
-        },
-
-        // Advanced snippets - Try-Catch
-        {
-          label: '시도-잡기',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '시도 {',
-            '\t${1:// 시도할 코드}',
-            '} 잡기 (${2:오류}) {',
-            '\t${3:// 오류 처리}',
-            '} 마침내 {',
-            '\t${0:// 정리 코드}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '예외 처리 블록을 생성합니다',
-          detail: 'try-catch-finally',
-          range,
-        },
-        {
-          label: 'trycatch',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            'try {',
-            '\t${1:// code to try}',
-            '} catch (${2:error}) {',
-            '\t${3:// error handling}',
-            '} finally {',
-            '\t${0:// cleanup}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: 'Try-catch-finally block',
-          detail: 'try-catch-finally',
-          range,
-        },
-
-        // Advanced snippets - Switch (if supported)
-        {
-          label: '선택',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '만약 ${1:값} == ${2:경우1} {',
-            '\t${3:// 처리1}',
-            '} 아니면 만약 ${1:값} == ${4:경우2} {',
-            '\t${5:// 처리2}',
-            '} 아니면 {',
-            '\t${0:// 기본 처리}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '다중 조건 분기를 생성합니다',
-          detail: 'multiple conditions',
-          range,
-        },
-
-        // Advanced snippets - Array iteration
-        {
-          label: '배열반복',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '변수 ${1:배열} = [${2:요소들}]',
-            '반복 ${3:항목} in ${1:배열} {',
-            '\t출력(${3:항목})',
-            '\t${0}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '배열을 순회합니다',
-          detail: 'array iteration',
-          range,
-        },
-
-        // Advanced snippets - Function with return
-        {
-          label: '반환함수',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '함수 ${1:이름}(${2:매개변수}) {',
-            '\t${3:// 계산}',
-            '\t반환 ${4:결과}',
-            '}',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '값을 반환하는 함수를 생성합니다',
-          detail: 'function with return',
-          range,
-        },
-
-        // Advanced snippets - Comment block
-        {
-          label: '주석블록',
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            '/*',
-            ' * ${1:설명}',
-            ' * ',
-            ' * @param {${2:타입}} ${3:매개변수} - ${4:설명}',
-            ' * @return {${5:타입}} ${6:반환값 설명}',
-            ' */',
-          ].join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: '문서화 주석 블록을 생성합니다',
-          detail: 'documentation comment',
-          range,
-        },
+        })),
       ];
-
       return { suggestions };
     },
   };
 }
 
+/** Which reference entry documents a word on hover. */
+const HOVER_ENTRY: Record<string, string> = {
+  만약: 'if', 아니면: 'if',
+  반복: 'while', 동안: 'while',
+  반복한다: 'repeat-n', 번: 'repeat-n',
+  부터: 'range-loop', 까지: 'range-loop', 미만: 'range-loop', 이하: 'range-loop', 이상: 'range-loop', 초과: 'range-loop',
+  함수: 'function', 반환: 'function',
+  그리고: 'logical', 또는: 'logical',
+  시도: 'try', 오류: 'try', 던지다: 'try',
+  비동기: 'async', 대기: 'async',
+  가져오기: 'import',
+  참: 'types', 거짓: 'types', 없음: 'types',
+  출력: 'print', 입력: 'input', 타입: 'type-of', 길이: 'type-of',
+  정수: 'convert', 실수: 'convert', 문자열: 'convert',
+  걸러낸다: 'filter', 변환한다: 'map', 축약한다: 'reduce', 찾다: 'find', 정렬한다: 'sort', 역순으로_나열한다: 'sort',
+  포함: 'contains', 추가: 'contains',
+  분리: 'string-functions', 찾기: 'string-functions', 바꾸기: 'string-functions', 부분문자열: 'string-functions',
+};
+
+/** Hover text for a word, in the page's language; null when the word has no entry. */
+export function hoverMarkdown(word: string, locale: 'ko' | 'en'): string | null {
+  const entry = REFERENCE.find((e) => e.id === HOVER_ENTRY[word]);
+  if (!entry) return null;
+  return [
+    `**${entry.title[locale]}** · \`${entry.syntax}\``,
+    entry.summary[locale],
+    '```kingsejong\n' + entry.example.trimEnd() + '\n```',
+  ].join('\n\n');
+}
+
 /**
- * Hover provider for Kingsejong - provides documentation on hover
+ * Hover provider: the reference panel's entry for keywords and common built-ins.
  */
 export function createKingsejongHoverProvider(monaco: Monaco): monacoEditor.languages.HoverProvider {
-  const keywordDocs: Record<string, string> = {
-    '함수': '**함수 (function)**\n\n함수를 정의합니다.\n\n```kingsejong\n함수 이름(매개변수) {\n  // 코드\n}\n```',
-    'function': '**function**\n\nDefines a function.\n\n```kingsejong\nfunction name(params) {\n  // code\n}\n```',
-    '변수': '**변수 (variable)**\n\n변수를 선언합니다.\n\n```kingsejong\n변수 이름 = 값\n```',
-    'var': '**var**\n\nDeclares a variable.\n\n```kingsejong\nvar name = value\n```',
-    '만약': '**만약 (if)**\n\n조건문을 실행합니다.\n\n```kingsejong\n만약 조건 {\n  // 참일 때 실행\n}\n```',
-    'if': '**if**\n\nExecutes a conditional statement.\n\n```kingsejong\nif condition {\n  // executes if true\n}\n```',
-    '아니면': '**아니면 (else)**\n\n조건이 거짓일 때 실행합니다.\n\n```kingsejong\n만약 조건 {\n  // 참\n} 아니면 {\n  // 거짓\n}\n```',
-    'else': '**else**\n\nExecutes when condition is false.\n\n```kingsejong\nif condition {\n  // true\n} else {\n  // false\n}\n```',
-    '출력': '**출력 (print)**\n\n값을 출력합니다.\n\n```kingsejong\n출력("안녕, 세상!")\n```',
-    'print': '**print**\n\nPrints a value.\n\n```kingsejong\nprint("Hello, World!")\n```',
-    '반복': '**반복 (for)**\n\n반복문을 실행합니다.\n\n```kingsejong\n반복 변수 in 범위 {\n  // 반복 실행\n}\n```',
-    'for': '**for**\n\nExecutes a loop.\n\n```kingsejong\nfor variable in range {\n  // loop body\n}\n```',
-    '동안': '**동안 (while)**\n\n조건이 참인 동안 반복합니다.\n\n```kingsejong\n동안 조건 {\n  // 반복 실행\n}\n```',
-    'while': '**while**\n\nRepeats while condition is true.\n\n```kingsejong\nwhile condition {\n  // loop body\n}\n```',
-    '반환': '**반환 (return)**\n\n함수에서 값을 반환합니다.\n\n```kingsejong\n함수 더하기(a, b) {\n  반환 a + b\n}\n```',
-    'return': '**return**\n\nReturns a value from a function.\n\n```kingsejong\nfunction add(a, b) {\n  return a + b\n}\n```',
-    '그리고': '**그리고 (and)**\n\n논리 AND 연산자. 두 조건이 모두 참일 때 참.\n\n```kingsejong\n만약 a > 0 그리고 b > 0 {\n  // 둘 다 양수\n}\n```',
-    'and': '**and**\n\nLogical AND operator. True when both conditions are true.\n\n```kingsejong\nif a > 0 and b > 0 {\n  // both positive\n}\n```',
-    '또는': '**또는 (or)**\n\n논리 OR 연산자. 두 조건 중 하나라도 참이면 참.\n\n```kingsejong\n만약 a > 0 또는 b > 0 {\n  // 하나 이상 양수\n}\n```',
-    'or': '**or**\n\nLogical OR operator. True when at least one condition is true.\n\n```kingsejong\nif a > 0 or b > 0 {\n  // at least one positive\n}\n```',
-    '시작': '**시작**\n\n프로그램의 진입점 함수입니다.\n\n```kingsejong\n함수 시작() {\n  출력("안녕, 세상!")\n}\n```',
-  };
-
   return {
     provideHover: (model, position) => {
       const word = model.getWordAtPosition(position);
       if (!word) return null;
-
-      const documentation = keywordDocs[word.word];
-      if (!documentation) return null;
-
-      return {
-        range: new monaco.Range(
-          position.lineNumber,
-          word.startColumn,
-          position.lineNumber,
-          word.endColumn
-        ),
-        contents: [
-          { value: documentation },
-        ],
-      };
+      const locale = typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'ko';
+      // The word may carry a particle or range marker ("숫자들을", "시작부터"): try the
+      // whole word, then the part before the suffix, then the suffix itself.
+      const candidates: { text: string; start: number }[] = [{ text: word.word, start: word.startColumn }];
+      for (const suffix of [...PARTICLES, ...RANGE_MARKERS]) {
+        if (word.word.length > suffix.length && word.word.endsWith(suffix)) {
+          const base = word.word.slice(0, -suffix.length);
+          candidates.push({ text: base, start: word.startColumn }, { text: suffix, start: word.startColumn + base.length });
+        }
+      }
+      for (const { text, start } of candidates) {
+        const markdown = hoverMarkdown(text, locale);
+        if (markdown) {
+          return {
+            range: new monaco.Range(position.lineNumber, start, position.lineNumber, start + text.length),
+            contents: [{ value: markdown }],
+          };
+        }
+      }
+      return null;
     },
   };
-}
-
-/**
- * Theme colors for Kingsejong language
- */
-export const kingsejongThemeColors = {
-  keywords: '#569CD6',      // Blue for keywords
-  types: '#4EC9B0',         // Cyan for types
-  functions: '#DCDCAA',     // Yellow for functions
-  variables: '#9CDCFE',     // Light blue for variables
-  strings: '#CE9178',       // Orange for strings
-  numbers: '#B5CEA8',       // Light green for numbers
-  comments: '#6A9955',      // Green for comments
-  operators: '#D4D4D4',     // Light gray for operators
-  korean: '#C586C0',        // Purple for Korean keywords
-};
-
-/**
- * Register custom theme for Kingsejong
- */
-export function registerKingsejongTheme(monaco: Monaco) {
-  monaco.editor.defineTheme('kingsejong-dark', {
-    base: 'vs-dark',
-    inherit: true,
-    rules: [
-      { token: 'keyword.kingsejong', foreground: kingsejongThemeColors.keywords, fontStyle: 'bold' },
-      { token: 'type.kingsejong', foreground: kingsejongThemeColors.types },
-      { token: 'function.kingsejong', foreground: kingsejongThemeColors.functions },
-      { token: 'variable.kingsejong', foreground: kingsejongThemeColors.variables },
-      { token: 'string.kingsejong', foreground: kingsejongThemeColors.strings },
-      { token: 'number.kingsejong', foreground: kingsejongThemeColors.numbers },
-      { token: 'comment.kingsejong', foreground: kingsejongThemeColors.comments, fontStyle: 'italic' },
-      { token: 'operator.kingsejong', foreground: kingsejongThemeColors.operators },
-    ],
-    colors: {
-      'editor.foreground': '#D4D4D4',
-      'editor.background': '#1E1E1E',
-    },
-  });
 }
 
 /**
@@ -868,48 +531,16 @@ export function createKingsejongOnTypeFormattingProvider(monaco: Monaco): monaco
 }
 
 /**
- * Register Kingsejong language with Monaco
+ * Registers the KingSejong language with Monaco. Colours come from the
+ * editor themes defined in CodeEditor.tsx.
  */
 export function registerKingsejongLanguage(monaco: Monaco) {
-  // Register language
-  monaco.languages.register({ id: kingsejongLanguageId });
-
-  // Set language configuration
+  monaco.languages.register({ id: kingsejongLanguageId, extensions: ['.ksj'], aliases: ['KingSejong', '킹세종'] });
   monaco.languages.setLanguageConfiguration(kingsejongLanguageId, kingsejongLanguageConfig);
-
-  // Set tokens provider
   monaco.languages.setMonarchTokensProvider(kingsejongLanguageId, kingsejongLanguageTokensProvider);
-
-  // Register completion provider
-  monaco.languages.registerCompletionItemProvider(
-    kingsejongLanguageId,
-    createKingsejongCompletionProvider(monaco)
-  );
-
-  // Register hover provider
-  monaco.languages.registerHoverProvider(
-    kingsejongLanguageId,
-    createKingsejongHoverProvider(monaco)
-  );
-
-  // Register document formatting provider
-  monaco.languages.registerDocumentFormattingEditProvider(
-    kingsejongLanguageId,
-    createKingsejongFormattingProvider(monaco)
-  );
-
-  // Register document range formatting provider
-  monaco.languages.registerDocumentRangeFormattingEditProvider(
-    kingsejongLanguageId,
-    createKingsejongRangeFormattingProvider(monaco)
-  );
-
-  // Register on-type formatting provider
-  monaco.languages.registerOnTypeFormattingEditProvider(
-    kingsejongLanguageId,
-    createKingsejongOnTypeFormattingProvider(monaco)
-  );
-
-  // Register custom theme
-  registerKingsejongTheme(monaco);
+  monaco.languages.registerCompletionItemProvider(kingsejongLanguageId, createKingsejongCompletionProvider(monaco));
+  monaco.languages.registerHoverProvider(kingsejongLanguageId, createKingsejongHoverProvider(monaco));
+  monaco.languages.registerDocumentFormattingEditProvider(kingsejongLanguageId, createKingsejongFormattingProvider(monaco));
+  monaco.languages.registerDocumentRangeFormattingEditProvider(kingsejongLanguageId, createKingsejongRangeFormattingProvider(monaco));
+  monaco.languages.registerOnTypeFormattingEditProvider(kingsejongLanguageId, createKingsejongOnTypeFormattingProvider(monaco));
 }

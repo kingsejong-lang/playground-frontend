@@ -68,10 +68,10 @@ const token = {} as monacoEditor.CancellationToken;
 const pos = (lineNumber: number, column: number) => ({ lineNumber, column }) as monacoEditor.Position;
 
 describe('registerKingsejongLanguage', () => {
-  it('registers the language, every provider and the theme', () => {
+  it('registers the language and every provider', () => {
     const m = stubMonaco();
     registerKingsejongLanguage(m);
-    expect(m.languages.register).toHaveBeenCalledWith({ id: kingsejongLanguageId });
+    expect(m.languages.register).toHaveBeenCalledWith(expect.objectContaining({ id: kingsejongLanguageId, extensions: ['.ksj'] }));
     for (const fn of [
       m.languages.setLanguageConfiguration,
       m.languages.setMonarchTokensProvider,
@@ -83,7 +83,8 @@ describe('registerKingsejongLanguage', () => {
     ]) {
       expect(fn).toHaveBeenCalledWith(kingsejongLanguageId, expect.anything());
     }
-    expect(m.editor.defineTheme).toHaveBeenCalledWith('kingsejong-dark', expect.objectContaining({ base: 'vs-dark' }));
+    // Colours come from CodeEditor's themes; the language defines none of its own.
+    expect(m.editor.defineTheme).not.toHaveBeenCalled();
   });
 });
 
@@ -97,6 +98,10 @@ describe('completion', () => {
     expect(new Set(labels).size).toBe(labels.length);
     const fn = result.suggestions.find((s) => s.label === '함수')!;
     expect(fn.insertTextRules).toBe(4);
+    expect(fn.insertText).toBe('${1:이름} = 함수(${2:매개변수}) {\n\t반환 $0\n}');
+    // No C-style or English keywords from older versions of this file.
+    for (const wrong of ['function', 'if', 'print', 'var', 'return']) expect(labels).not.toContain(wrong);
+    expect(labels).toContain('출력');
     expect(fn.range).toEqual({ startLineNumber: 1, endLineNumber: 1, startColumn: 2, endColumn: 2 });
   });
 });
@@ -107,7 +112,20 @@ describe('hover', () => {
   it('documents a keyword under the cursor', () => {
     const hover = provider.provideHover(model('  출력("안녕")'), pos(1, 4), token) as monacoEditor.languages.Hover;
     expect(hover.range).toEqual(new Range(1, 3, 1, 5));
-    expect((hover.contents[0] as { value: string }).value).toContain('출력 (print)');
+    expect((hover.contents[0] as { value: string }).value).toContain('**출력** · `출력(값, ...)`');
+  });
+
+  it('follows the page language and looks past a trailing particle', () => {
+    document.documentElement.lang = 'en';
+    try {
+      const hover = provider.provideHover(model('숫자들을 걸러낸다(f)'), pos(1, 7), token) as monacoEditor.languages.Hover;
+      expect((hover.contents[0] as { value: string }).value).toContain('**Filter**');
+      const range = provider.provideHover(model('i가 시작부터 끝까지 {'), pos(1, 6), token) as monacoEditor.languages.Hover;
+      expect((range.contents[0] as { value: string }).value).toContain('**Range loop**');
+      expect(range.range).toEqual(new Range(1, 6, 1, 8));
+    } finally {
+      document.documentElement.lang = '';
+    }
   });
 
   it('returns nothing for unknown words and whitespace', () => {
