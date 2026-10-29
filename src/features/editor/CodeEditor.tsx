@@ -6,9 +6,14 @@ import type { editor as MonacoEditor } from 'monaco-editor';
 import type { DiagnosticView } from '@/lib/rpc';
 import { registerKingsejongLanguage, kingsejongLanguageId } from '@/features/editor/monaco/kingsejong-language';
 
-// Configure Monaco loader to avoid React DevTools conflicts
+/** monaco-editor version copied to public/monaco by scripts/copy-monaco.mjs (pinned in package.json). */
+export const MONACO_VERSION = '0.55.1';
+/** Same-origin path of Monaco's AMD bundle; nothing is loaded from a CDN. */
+export const MONACO_VS_PATH = `/monaco/${MONACO_VERSION}/vs`;
+
 if (typeof window !== 'undefined') {
   loader.config({
+    paths: { vs: MONACO_VS_PATH },
     'vs/nls': {
       availableLanguages: {
         '*': 'en',
@@ -285,7 +290,7 @@ export default function CodeEditor({
   );
 }
 
-/** Placeholder lines shown while Monaco loads from the CDN. */
+/** Placeholder lines shown while Monaco loads. */
 export function EditorSkeleton({ label }: { label?: string }) {
   const widths = ['62%', '48%', '71%', '0%', '39%', '55%', '30%'];
   return (

@@ -16,10 +16,18 @@ describe('buildCsp', () => {
     expect(directive(buildCsp({ ...base, isDev: true }), 'script-src')).toContain("'unsafe-eval'");
   });
 
-  it('limits connect-src to self, the API origin and the Monaco CDN', () => {
+  it('limits connect-src to self and the API origin', () => {
     const connect = directive(buildCsp({ ...base, isDev: false }), 'connect-src');
-    expect(connect).toBe("connect-src 'self' https://api.example.com https://cdn.jsdelivr.net");
+    expect(connect).toBe("connect-src 'self' https://api.example.com");
     expect(directive(buildCsp({ ...base, isDev: true }), 'connect-src')).toContain('ws://localhost:3000');
+  });
+
+  it('allows no third-party host for scripts, styles, fonts or connections (Monaco is self-hosted)', () => {
+    const csp = buildCsp({ ...base, isDev: false });
+    expect(csp).not.toContain('cdn.jsdelivr.net');
+    expect(directive(csp, 'style-src')).toBe("style-src 'self' 'unsafe-inline'");
+    expect(directive(csp, 'font-src')).toBe("font-src 'self' data:");
+    expect(directive(csp, 'worker-src')).toBe("worker-src 'self' blob:");
   });
 
   it('denies framing except for embed routes', () => {

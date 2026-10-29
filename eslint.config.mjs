@@ -30,6 +30,8 @@ export default defineConfig([
     'tests/e2e/report/**',
     'tests/e2e/report-stack/**',
     'playwright-report/**',
+    // Copied from node_modules by scripts/copy-monaco.mjs.
+    'public/monaco/**',
     'test-results/**',
   ]),
 ]);
