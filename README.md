@@ -64,6 +64,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 | 변수 | 설명 |
 |------|------|
 | `NEXT_PUBLIC_API_URL` | Connect Gateway 의 origin. 빌드 시점에 번들에 들어가며, CSP `connect-src` 에도 이 origin 만 허용됩니다 |
+| `PLAYGROUND_API_INTERNAL_URL` | (선택) Next.js 서버가 첫 화면용 언어 목록을 가져올 때 쓰는 Gateway 주소. 컨테이너 내부 주소처럼 브라우저와 다른 경로로 닿을 때 지정합니다. 없으면 `NEXT_PUBLIC_API_URL` 을 씁니다. 실행 시점에 읽습니다 |
 | `NEXT_PUBLIC_RPC_FAKE` | `1` 이면 **개발 서버(`npm run dev`)에서만** 백엔드 대신 가짜 RPC 전송(`src/lib/rpc/fake.ts`)을 씁니다. 프로덕션 빌드에서는 켤 수 없습니다 (아래 참고) |
 
 ### 백엔드 없이 UI 작업하기 (가짜 RPC 전송)
