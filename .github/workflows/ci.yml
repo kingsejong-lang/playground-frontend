@@ -23,7 +23,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
+      - name: Unit tests with coverage thresholds
+        run: npm run test:coverage
       - run: npm run build
       - name: Dependency audit
         run: npm audit --audit-level=low

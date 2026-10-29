@@ -89,33 +89,3 @@ export function useKeyboardShortcut(
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown, enabled]);
 }
-
-/**
- * Get platform-specific modifier key name.
- * Returns 'Cmd' on Mac, 'Ctrl' on other platforms.
- */
-export function getModifierKeyName(): string {
-  return navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl';
-}
-
-/**
- * Format a keyboard shortcut for display.
- *
- * @example
- * formatShortcut('Enter', { ctrl: true }) // 'Ctrl+Enter' or 'Cmd+Enter'
- * formatShortcut('k', { ctrl: true, shift: true }) // 'Ctrl+Shift+K'
- */
-export function formatShortcut(key: string, options: KeyboardShortcutOptions = {}): string {
-  const { ctrl = false, shift = false, alt = false } = options;
-  const parts: string[] = [];
-
-  if (ctrl) parts.push(getModifierKeyName());
-  if (shift) parts.push('Shift');
-  if (alt) parts.push('Alt');
-
-  // Capitalize single letters
-  const displayKey = key.length === 1 ? key.toUpperCase() : key;
-  parts.push(displayKey);
-
-  return parts.join('+');
-}

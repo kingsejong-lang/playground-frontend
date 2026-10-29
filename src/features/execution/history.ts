@@ -205,14 +205,6 @@ export function addHistoryItem(item: Omit<HistoryItem, 'id' | 'timestamp'>): His
 }
 
 /**
- * Get a single history item by ID
- */
-export function getHistoryItem(id: string): HistoryItem | null {
-  const items = getHistoryItems();
-  return items.find(item => item.id === id) || null;
-}
-
-/**
  * Delete a history item by ID
  */
 export function deleteHistoryItem(id: string): void {
