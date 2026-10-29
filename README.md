@@ -65,7 +65,14 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 |------|------|
 | `NEXT_PUBLIC_API_URL` | Connect Gateway 의 origin. 빌드 시점에 번들에 들어가며, CSP `connect-src` 에도 이 origin 만 허용됩니다 |
 | `PLAYGROUND_API_INTERNAL_URL` | (선택) Next.js 서버가 첫 화면용 언어 목록을 가져올 때 쓰는 Gateway 주소. 컨테이너 내부 주소처럼 브라우저와 다른 경로로 닿을 때 지정합니다. 없으면 `NEXT_PUBLIC_API_URL` 을 씁니다. 실행 시점에 읽습니다 |
+| `NEXT_COMPRESS` | (선택) `false` 로 두면 `next start` 가 응답을 gzip 으로 압축하지 않습니다. 기본은 압축합니다. 실행 시점에 읽습니다 (아래 "응답 압축" 참고) |
 | `NEXT_PUBLIC_RPC_FAKE` | `1` 이면 **개발 서버(`npm run dev`)에서만** 백엔드 대신 가짜 RPC 전송(`src/lib/rpc/fake.ts`)을 씁니다. 프로덕션 빌드에서는 켤 수 없습니다 (아래 참고) |
+
+### 응답 압축 (`NEXT_COMPRESS`)
+
+- **켜 두기 (기본):** 브라우저가 `next start` 에 바로 붙을 때. 압축해 줄 곳이 Next.js 서버뿐입니다.
+- **끄기 (`NEXT_COMPRESS=false`):** 응답을 스스로 압축하는 프록시 뒤에 둘 때. 예를 들어 brotli, gzip, zstd 로 압축하는 Envoy Gateway 가 그렇습니다. 끄지 않으면 Node 가 gzip 에 CPU 를 쓰고, 프록시는 이미 압축된 응답을 그대로 넘기므로 브라우저는 brotli 대신 gzip 을 받습니다.
+- 확인: `curl -sI -H 'Accept-Encoding: br, gzip' http://localhost:3000/ko | grep -i content-encoding`. 켜면 `gzip` 이 보이고, 끄면 아무것도 나오지 않습니다.
 
 ### 백엔드 없이 UI 작업하기 (가짜 RPC 전송)
 
