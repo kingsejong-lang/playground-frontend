@@ -9,9 +9,20 @@ const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === 'tr
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+/**
+ * Response compression by the Next.js server. On by default (direct `next start`).
+ * Set NEXT_COMPRESS=false behind a proxy that compresses itself (for example
+ * Envoy Gateway with brotli/gzip/zstd): the proxy then picks the best encoding
+ * and the Node process does no gzip work.
+ */
+export function compressEnabled(value = process.env.NEXT_COMPRESS): boolean {
+  return value?.trim().toLowerCase() !== 'false';
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  compress: compressEnabled(),
   // Do not write AGENTS.md into the repository on `next dev`.
   agentRules: false,
 
