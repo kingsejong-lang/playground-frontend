@@ -45,6 +45,31 @@ export interface RevealRequest {
   nonce: number;
 }
 
+/** A request to insert text at the cursor; `nonce` makes repeated inserts of the same text work. */
+export interface InsertRequest {
+  text: string;
+  nonce: number;
+}
+
+/**
+ * Where inserted text goes: a selection is replaced; on an empty line the text
+ * goes at the cursor; on a line with code it goes on a new line below.
+ */
+export function insertionEdit(
+  selection: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number; isEmpty: boolean },
+  lineText: string,
+  text: string
+): { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; text: string } {
+  const body = text.endsWith('\n') ? text : `${text}\n`;
+  if (!selection.isEmpty || lineText.trim() === '') {
+    const { startLineNumber, startColumn, endLineNumber, endColumn } = selection;
+    return { range: { startLineNumber, startColumn, endLineNumber, endColumn }, text: body };
+  }
+  const end = lineText.length + 1;
+  const line = selection.startLineNumber;
+  return { range: { startLineNumber: line, startColumn: end, endLineNumber: line, endColumn: end }, text: `\n${body.replace(/\n$/, '')}` };
+}
+
 interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -62,6 +87,8 @@ interface CodeEditorProps {
   /** Diagnostics for this file, drawn as squiggles. */
   diagnostics?: readonly DiagnosticView[];
   reveal?: RevealRequest | null;
+  /** Text to insert at the cursor (see insertionEdit); undoable with the editor's undo. */
+  insert?: InsertRequest | null;
 }
 
 /*
@@ -167,6 +194,7 @@ export default function CodeEditor({
   ariaLabel,
   diagnostics,
   reveal,
+  insert,
 }: CodeEditorProps) {
   const isKingsejongRegistered = useRef(false);
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
@@ -258,6 +286,32 @@ export default function CodeEditor({
     editor.setPosition(position);
     editor.focus();
   }, [reveal]);
+
+  // Insert text at the cursor as one undoable edit.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    const model = editor?.getModel();
+    if (!editor || !monaco || !model || !insert) return;
+    const selection = editor.getSelection();
+    if (!selection) return;
+    const edit = insertionEdit(
+      { ...selection, isEmpty: selection.isEmpty() },
+      model.getLineContent(selection.startLineNumber),
+      insert.text
+    );
+    // Leave the cursor at the end of the inserted text.
+    const lines = edit.text.split('\n');
+    const endLine = edit.range.startLineNumber + lines.length - 1;
+    const endColumn = (lines.length === 1 ? edit.range.startColumn : 1) + lines[lines.length - 1].length;
+    editor.pushUndoStop();
+    editor.executeEdits('playground-insert', [{ ...edit, forceMoveMarkers: true }], [
+      new monaco.Selection(endLine, endColumn, endLine, endColumn),
+    ]);
+    editor.pushUndoStop();
+    editor.revealLineInCenterIfOutsideViewport(endLine);
+    editor.focus();
+  }, [insert]);
 
   return (
     <Editor
